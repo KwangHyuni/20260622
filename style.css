@@ -1710,6 +1710,121 @@ body {
   color: var(--primary);
 }
 
+/* 사주 상담 결과 패널 */
+.chat-consultation {
+  margin: 20px 0;
+  padding: 24px 20px;
+  background: linear-gradient(180deg, #f0f6ff 0%, var(--canvas) 100%);
+  border: 1px solid var(--primary-soft);
+  border-radius: var(--rounded-xl);
+  box-shadow: var(--shadow-soft);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+
+.chat-consultation.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.chat-consultation-title {
+  margin-bottom: 20px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--primary-deep);
+  text-align: center;
+}
+
+.chat-consult-block {
+  margin-bottom: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.chat-consult-block:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.chat-consult-label {
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.chat-consult-text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--ink-soft);
+  white-space: pre-wrap;
+}
+
+.chat-consult-balls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.chat-consult-balls .chat-ball {
+  width: 48px !important;
+  height: 48px !important;
+}
+
+.chat-consult-balls .ball-number {
+  font-size: 17px !important;
+}
+
+.chat-consult-reasons {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chat-consult-reasons li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--canvas);
+  border: 1px solid var(--hairline);
+  border-radius: var(--rounded-md);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--charcoal);
+}
+
+.chat-consult-reasons li:last-child {
+  margin-bottom: 0;
+}
+
+.chat-consult-num {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.chat-consult-reason {
+  flex: 1;
+}
+
 .chat-messages {
   display: flex;
   flex-direction: column;

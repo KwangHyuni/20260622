@@ -101,6 +101,35 @@
           <div id="chat-loading" class="chat-loading" hidden>사주를 분석하는 중…</div>
           <div id="chat-error" class="history-error" hidden></div>
 
+          <section id="chat-consultation" class="chat-consultation" hidden aria-label="사주 상담 결과">
+            <h3 class="chat-consultation-title">사주 상담 결과</h3>
+
+            <article class="chat-consult-block">
+              <h4 class="chat-consult-label">사주 분석</h4>
+              <p id="chat-consult-summary" class="chat-consult-text"></p>
+            </article>
+
+            <article class="chat-consult-block">
+              <h4 class="chat-consult-label">추천 번호</h4>
+              <div id="chat-consult-balls" class="chat-consult-balls"></div>
+            </article>
+
+            <article class="chat-consult-block">
+              <h4 class="chat-consult-label">번호별 추천 근거</h4>
+              <ul id="chat-consult-reasons" class="chat-consult-reasons"></ul>
+            </article>
+
+            <article class="chat-consult-block">
+              <h4 class="chat-consult-label">종합 설명</h4>
+              <p id="chat-consult-explanation" class="chat-consult-text"></p>
+            </article>
+
+            <article class="chat-consult-block" id="chat-consult-reply-block" hidden>
+              <h4 class="chat-consult-label">AI 상담 답변</h4>
+              <p id="chat-consult-reply" class="chat-consult-text"></p>
+            </article>
+          </section>
+
           <div id="chat-messages" class="chat-messages" aria-live="polite"></div>
 
           <div class="chat-input-row">

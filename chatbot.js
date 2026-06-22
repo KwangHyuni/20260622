@@ -1,6 +1,5 @@
 const SAJU_API = '/api/saju-chat';
 
-const chatbotPanel = document.getElementById('chatbot-panel');
 const sajuForm = document.getElementById('saju-form');
 const chatBirth = document.getElementById('chat-birth');
 const chatMessages = document.getElementById('chat-messages');
@@ -9,6 +8,7 @@ const chatSendBtn = document.getElementById('chat-send-btn');
 const chatRecommendBtn = document.getElementById('chat-recommend-btn');
 const chatError = document.getElementById('chat-error');
 const chatLoading = document.getElementById('chat-loading');
+const chatConsultation = document.getElementById('chat-consultation');
 
 let chatHistory = [];
 let profileLocked = false;
@@ -34,57 +34,77 @@ function createChatBall(num) {
   return ball;
 }
 
-function renderNumberBalls(numbers) {
-  const wrap = document.createElement('div');
-  wrap.className = 'chat-balls';
-  numbers.forEach((n) => wrap.appendChild(createChatBall(n)));
-  return wrap;
+function renderNumberBalls(numbers, container) {
+  container.innerHTML = '';
+  numbers.forEach((n) => container.appendChild(createChatBall(n)));
 }
 
-function renderNumberReasons(numbers, reasons) {
-  if (!reasons?.length) return null;
-  const list = document.createElement('ul');
-  list.className = 'chat-reason-list';
-  numbers.forEach((num, i) => {
-    const li = document.createElement('li');
-    li.innerHTML = `<strong>${num}</strong> — ${reasons[i] || ''}`;
-    list.appendChild(li);
-  });
-  return list;
+function hideConsultationPanel() {
+  if (chatConsultation) {
+    chatConsultation.hidden = true;
+    chatConsultation.classList.remove('visible');
+  }
 }
 
-function appendMessage(role, content, { numbers, sajuSummary, numberReasons, explanation } = {}) {
+function renderConsultationPanel(data) {
+  if (!chatConsultation || !data) return;
+
+  const summaryEl = document.getElementById('chat-consult-summary');
+  const ballsEl = document.getElementById('chat-consult-balls');
+  const reasonsEl = document.getElementById('chat-consult-reasons');
+  const explanationEl = document.getElementById('chat-consult-explanation');
+  const replyBlock = document.getElementById('chat-consult-reply-block');
+  const replyEl = document.getElementById('chat-consult-reply');
+
+  if (summaryEl) {
+    summaryEl.textContent = data.sajuSummary || '사주 분석 내용을 불러오지 못했습니다.';
+  }
+
+  if (ballsEl && data.numbers?.length) {
+    renderNumberBalls(data.numbers, ballsEl);
+  }
+
+  if (reasonsEl) {
+    reasonsEl.innerHTML = '';
+    if (data.numbers?.length && data.numberReasons?.length) {
+      data.numbers.forEach((num, i) => {
+        const li = document.createElement('li');
+        li.innerHTML = `<span class="chat-consult-num">${num}</span><span class="chat-consult-reason">${data.numberReasons[i] || ''}</span>`;
+        reasonsEl.appendChild(li);
+      });
+    } else {
+      const li = document.createElement('li');
+      li.textContent = '번호별 근거를 생성하지 못했습니다.';
+      reasonsEl.appendChild(li);
+    }
+  }
+
+  if (explanationEl) {
+    explanationEl.textContent = data.explanation || data.reply || '';
+  }
+
+  const showReply = data.reply && data.reply !== data.explanation;
+  if (replyBlock && replyEl) {
+    replyBlock.hidden = !showReply;
+    if (showReply) replyEl.textContent = data.reply;
+  }
+
+  chatConsultation.hidden = false;
+  requestAnimationFrame(() => chatConsultation.classList.add('visible'));
+}
+
+function appendMessage(role, content) {
   const msg = document.createElement('div');
   msg.className = `chat-msg chat-msg--${role}`;
 
   const bubble = document.createElement('div');
   bubble.className = 'chat-bubble';
 
-  if (role === 'assistant' && sajuSummary) {
-    const summary = document.createElement('p');
-    summary.className = 'chat-saju-summary';
-    summary.textContent = sajuSummary;
-    bubble.appendChild(summary);
-  }
-
-  if (role === 'assistant' && numbers?.length) {
-    bubble.appendChild(renderNumberBalls(numbers));
-    const reasons = renderNumberReasons(numbers, numberReasons);
-    if (reasons) bubble.appendChild(reasons);
-  }
-
   if (content) {
     const text = document.createElement('p');
     text.className = 'chat-text';
     text.textContent = content;
     bubble.appendChild(text);
-  }
-
-  if (role === 'assistant' && explanation && explanation !== content) {
-    const detail = document.createElement('p');
-    detail.className = 'chat-explanation';
-    detail.textContent = explanation;
-    bubble.appendChild(detail);
   }
 
   msg.appendChild(bubble);
@@ -95,7 +115,7 @@ function appendMessage(role, content, { numbers, sajuSummary, numberReasons, exp
 function setChatBusy(busy) {
   chatRecommendBtn.disabled = busy;
   chatSendBtn.disabled = busy;
-  chatInput.disabled = busy;
+  if (profileLocked) chatInput.disabled = busy;
   chatLoading.hidden = !busy;
 }
 
@@ -181,6 +201,7 @@ async function handleRecommend() {
 
   chatHistory = [];
   chatMessages.innerHTML = '';
+  hideConsultationPanel();
   setProfileLocked(true);
 
   appendMessage('user', `${profile.birthDate} · ${profile.gender === 'male' ? '남성' : '여성'} — 사주에 맞는 로또 번호를 추천해 주세요.`);
@@ -191,7 +212,8 @@ async function handleRecommend() {
   );
 
   if (data) {
-    appendMessage('assistant', data.reply, data);
+    renderConsultationPanel(data);
+    appendMessage('assistant', '사주 분석과 추천 번호, 설명을 위 결과 패널에 표시했습니다. 추가 질문은 아래 입력창을 이용해 주세요.');
   }
 }
 
@@ -209,7 +231,8 @@ async function handleChatSend() {
 
   const data = await requestSajuChat(text);
   if (data) {
-    appendMessage('assistant', data.reply, data);
+    renderConsultationPanel(data);
+    appendMessage('assistant', data.reply || '상담 내용을 결과 패널에 업데이트했습니다.');
   }
 }
 
