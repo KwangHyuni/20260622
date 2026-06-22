@@ -128,22 +128,6 @@ function hideSlotResult() {
   }
 }
 
-function showSlotResult(numbers) {
-  const panel = document.getElementById('slot-result');
-  const ballsEl = document.getElementById('slot-result-balls');
-  if (!panel || !ballsEl) return;
-
-  ballsEl.innerHTML = '';
-  numbers.forEach((num, i) => {
-    const ball = createBall(num, false, 'slot-result-ball');
-    ball.style.animationDelay = `${i * 0.1}s`;
-    ballsEl.appendChild(ball);
-  });
-
-  panel.hidden = false;
-  requestAnimationFrame(() => panel.classList.add('visible'));
-}
-
 function createReelItem(num) {
   const item = document.createElement('div');
   item.className = 'slot-reel-item';
@@ -186,12 +170,15 @@ function easeOutCubic(t) {
   return 1 - (1 - t) ** 3;
 }
 
-function spinReel(strip, finalNum, durationMs) {
+function prepareReelSpin(strip, finalNum) {
   strip.innerHTML = '';
   const numbers = buildReelStrip(finalNum);
   numbers.forEach((n) => strip.appendChild(createReelItem(n)));
+  strip.style.transform = 'translate3d(0, 0, 0)';
+  return (numbers.length - 1) * REEL_ITEM_HEIGHT;
+}
 
-  const totalOffset = (numbers.length - 1) * REEL_ITEM_HEIGHT;
+function spinReelToStop(strip, totalOffset, durationMs) {
   const overshoot = REEL_ITEM_HEIGHT * 0.35;
   const start = performance.now();
 
@@ -214,6 +201,24 @@ function spinReel(strip, finalNum, durationMs) {
   });
 }
 
+function revealSlotResultBall(numbers, index) {
+  const panel = document.getElementById('slot-result');
+  const ballsEl = document.getElementById('slot-result-balls');
+  if (!panel || !ballsEl) return;
+
+  if (index === 0) {
+    ballsEl.innerHTML = '';
+    panel.hidden = false;
+    requestAnimationFrame(() => panel.classList.add('visible'));
+  }
+
+  const ball = createBall(numbers[index], false, 'slot-result-ball');
+  ballsEl.appendChild(ball);
+}
+
+
+const BASE_SPIN_MS = 1800;
+const REEL_STOP_STAGGER_MS = 480;
 
 async function animateDraw(numbers) {
   buildSlotMachine();
@@ -222,18 +227,24 @@ async function animateDraw(numbers) {
 
   await sleep(300);
 
-  for (let i = 0; i < COUNT; i++) {
+  const offsets = numbers.map((num, i) => prepareReelSpin(slotReels[i].strip, num));
+  slotReels.forEach(({ reel }) => reel.classList.add('spinning'));
+
+  const stopTasks = numbers.map((num, i) => {
+    const duration = BASE_SPIN_MS + i * REEL_STOP_STAGGER_MS;
     const { strip, reel } = slotReels[i];
-    reel.classList.add('spinning');
-    const duration = 1600 + i * 420;
-    await spinReel(strip, numbers[i], duration);
-    reel.classList.remove('spinning');
-    reel.classList.add('stopped', 'winner');
-    await sleep(180);
-  }
+
+    return spinReelToStop(strip, offsets[i], duration).then(async () => {
+      reel.classList.remove('spinning');
+      reel.classList.add('stopped', 'winner');
+      revealSlotResultBall(numbers, i);
+      await sleep(150);
+    });
+  });
+
+  await Promise.all(stopTasks);
 
   setSlotState('complete');
-  showSlotResult(numbers);
   await sleep(400);
 }
 
