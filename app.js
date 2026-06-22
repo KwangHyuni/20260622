@@ -92,6 +92,10 @@ function buildSlotMachine() {
         <span class="slot-coin"></span>
         <span class="slot-coin"></span>
       </div>
+      <div class="slot-led-board" id="slot-cabinet-result" aria-live="polite">
+        <span class="slot-led-label">추첨 번호</span>
+        <div class="slot-led-digits" id="slot-cabinet-digits"></div>
+      </div>
       <div class="slot-plinth"></div>
     </div>
     <p class="slot-status" id="slot-status">추첨을 시작하세요</p>
@@ -118,6 +122,39 @@ function buildSlotMachine() {
 
     slotReels.push({ reel, strip });
   }
+
+  initCabinetDigits();
+}
+
+function initCabinetDigits() {
+  const digitsEl = document.getElementById('slot-cabinet-digits');
+  if (!digitsEl) return;
+
+  digitsEl.innerHTML = '';
+  for (let i = 0; i < COUNT; i++) {
+    const cell = document.createElement('span');
+    cell.className = 'slot-led-digit slot-led-digit--empty';
+    cell.dataset.index = String(i);
+    cell.textContent = '?';
+    digitsEl.appendChild(cell);
+  }
+
+  const board = document.getElementById('slot-cabinet-result');
+  if (board) board.classList.remove('has-results');
+}
+
+function resetCabinetDigits() {
+  initCabinetDigits();
+}
+
+function revealCabinetDigit(num, index) {
+  const cell = document.getElementById('slot-cabinet-digits')?.querySelector(`[data-index="${index}"]`);
+  const board = document.getElementById('slot-cabinet-result');
+  if (!cell) return;
+
+  cell.className = `slot-led-digit slot-led-digit--${getBallColor(num)} slot-led-digit--pop`;
+  cell.textContent = String(num);
+  if (board) board.classList.add('has-results');
 }
 
 function hideSlotResult() {
@@ -126,6 +163,7 @@ function hideSlotResult() {
     panel.hidden = true;
     panel.classList.remove('visible');
   }
+  resetCabinetDigits();
 }
 
 function createReelItem(num) {
@@ -214,6 +252,7 @@ function revealSlotResultBall(numbers, index) {
 
   const ball = createBall(numbers[index], false, 'slot-result-ball');
   ballsEl.appendChild(ball);
+  revealCabinetDigit(numbers[index], index);
 }
 
 
