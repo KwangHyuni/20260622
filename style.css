@@ -345,7 +345,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 20px;
-  min-height: 380px;
+  min-height: 320px;
   padding: 32px 16px 24px;
   background: radial-gradient(circle at center, #eef4ff 0%, var(--cloud) 55%, #e8ecf4 100%);
   border-radius: var(--rounded-lg);
@@ -354,304 +354,258 @@ body {
   position: relative;
 }
 
-/* ── 3D Sphere lottery machine ── */
-.sphere-stage {
+/* ── Slot machine ── */
+.slot-stage {
   position: relative;
   width: 100%;
-  max-width: 340px;
+  max-width: 520px;
   margin: 0 auto;
 }
 
-.sphere-scene {
+.slot-cabinet {
   position: relative;
-  perspective: 920px;
-  perspective-origin: 50% 38%;
-  height: 360px;
+  padding: 14px 16px 12px;
+  background: linear-gradient(180deg, #0e3191 0%, #024ad8 38%, #0e3191 100%);
+  border-radius: var(--rounded-xl);
+  box-shadow:
+    0 20px 48px rgba(2, 74, 216, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -4px 12px rgba(0, 0, 0, 0.2);
 }
 
-.sphere-glow {
-  position: absolute;
-  top: 8%;
-  left: 50%;
-  width: 280px;
-  height: 280px;
-  margin-left: -140px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(2, 74, 216, 0.22) 0%, rgba(41, 110, 249, 0.08) 45%, transparent 70%);
-  opacity: 0;
-  transition: opacity 0.5s ease;
-  pointer-events: none;
-}
-
-.sphere-stage.is-drawing .sphere-glow,
-.sphere-stage.is-complete .sphere-glow {
-  opacity: 1;
-  animation: sphereGlowPulse 1.6s ease-in-out infinite;
-}
-
-@keyframes sphereGlowPulse {
-  0%, 100% { transform: scale(0.92); opacity: 0.7; }
-  50% { transform: scale(1.06); opacity: 1; }
-}
-
-.sphere-assembly {
-  position: relative;
+.slot-top {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  transform-style: preserve-3d;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: var(--rounded-md);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-.sphere-globe {
+.slot-marquee-text {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: #fff;
+  text-shadow: 0 0 12px rgba(201, 224, 252, 0.8);
+}
+
+.slot-marquee-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bloom-coral);
+  box-shadow: 0 0 8px var(--bloom-coral);
+  animation: slotDotBlink 1.2s ease-in-out infinite;
+}
+
+.slot-marquee-dot:last-child {
+  animation-delay: 0.6s;
+}
+
+@keyframes slotDotBlink {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+.slot-body {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.slot-window {
   position: relative;
-  width: 240px;
-  height: 240px;
-  transform-style: preserve-3d;
-  transform: rotateX(-8deg);
-  transition: transform 0.3s ease;
-}
-
-.sphere-globe.rumble {
-  animation: globeRumble 0.12s linear infinite;
-}
-
-@keyframes globeRumble {
-  0%, 100% { transform: rotateX(-8deg) translateX(0); }
-  25% { transform: rotateX(-8deg) translateX(-2px) rotateZ(-0.5deg); }
-  75% { transform: rotateX(-8deg) translateX(2px) rotateZ(0.5deg); }
-}
-
-.sphere-wire {
-  position: absolute;
-  inset: 0;
-  transform-style: preserve-3d;
-  pointer-events: none;
-}
-
-.sphere-ring {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  border-radius: 50%;
-  border: 1px solid rgba(2, 74, 216, 0.12);
-  transform-style: preserve-3d;
-}
-
-.sphere-ring--eq {
-  width: 220px;
-  height: 220px;
-  margin: -110px;
-}
-
-.sphere-ring--mer {
-  width: 220px;
-  height: 220px;
-  margin: -110px;
-  border-color: rgba(2, 74, 216, 0.08);
-}
-
-.sphere-tumbler {
-  position: absolute;
-  inset: 0;
-  transform-style: preserve-3d;
-  transform: rotateX(-6deg);
-  will-change: transform;
-}
-
-.sphere-tumbler.physics-active .sphere-ball-wrap {
-  will-change: transform;
-}
-
-.sphere-ball--fly {
-  width: 52px !important;
-  height: 52px !important;
-}
-
-.sphere-ball--fly .ball-surface {
+  flex: 1;
+  padding: 10px 8px;
+  background: linear-gradient(180deg, #1a1a1a 0%, #292929 100%);
+  border-radius: var(--rounded-lg);
+  border: 3px solid rgba(255, 255, 255, 0.2);
   box-shadow:
-    inset -5px -8px 14px rgba(0, 0, 0, 0.38),
-    inset 4px 4px 10px rgba(255, 255, 255, 0.28),
-    0 12px 28px rgba(2, 74, 216, 0.35);
+    inset 0 6px 20px rgba(0, 0, 0, 0.55),
+    inset 0 -2px 8px rgba(255, 255, 255, 0.06);
+  overflow: hidden;
 }
 
-.sphere-ball--fly .ball-number {
-  font-size: 18px !important;
-}
-
-.sphere-ball-wrap {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 34px;
-  height: 34px;
-  margin: -17px;
-  transform-style: preserve-3d;
-  transition: none;
-}
-
-.sphere-ball--ghost .ball-surface {
-  opacity: 0.45;
-  filter: saturate(0.6);
-}
-
-.sphere-ball--ghost .ball-number {
-  color: var(--graphite);
-  text-shadow: none;
-}
-
-.sphere-ball {
-  width: 34px !important;
-  height: 34px !important;
-}
-
-.sphere-ball .ball-number {
-  font-size: 13px !important;
-}
-
-.sphere-ball .ball-highlight {
-  width: 28%;
-  height: 18%;
-}
-
-.sphere-glass {
+.slot-window-shine {
   position: absolute;
   inset: 0;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.12) 28%, transparent 52%),
-    radial-gradient(circle at 72% 78%, rgba(2, 74, 216, 0.14) 0%, transparent 45%),
-    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.04) 0%, rgba(2, 74, 216, 0.1) 100%);
-  border: 2px solid rgba(255, 255, 255, 0.75);
-  box-shadow:
-    inset -16px -20px 40px rgba(2, 74, 216, 0.12),
-    inset 10px 12px 28px rgba(255, 255, 255, 0.45),
-    0 20px 48px rgba(2, 74, 216, 0.18);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, transparent 40%, transparent 60%, rgba(255, 255, 255, 0.04) 100%);
   pointer-events: none;
-  z-index: 8;
+  z-index: 4;
 }
 
-.sphere-shine {
-  position: absolute;
-  top: 14%;
-  left: 18%;
-  width: 36%;
-  height: 22%;
-  border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(255, 255, 255, 0.85) 0%, transparent 70%);
-  transform: rotate(-24deg);
-  pointer-events: none;
-  z-index: 9;
-}
-
-.sphere-neck {
-  width: 52px;
-  height: 28px;
-  margin-top: -6px;
-  background: linear-gradient(180deg, rgba(2, 74, 216, 0.15), rgba(2, 74, 216, 0.35));
-  border-left: 2px solid rgba(255, 255, 255, 0.5);
-  border-right: 2px solid rgba(255, 255, 255, 0.5);
-  clip-path: polygon(18% 0%, 82% 0%, 100% 100%, 0% 100%);
+.slot-reels {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  position: relative;
   z-index: 2;
 }
 
-.sphere-chute {
+.slot-reel {
   position: relative;
-  width: 72px;
-  margin-top: -2px;
+  height: 58px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #0a0a0a 0%, #1f1f1f 50%, #0a0a0a 100%);
+  border-radius: var(--rounded-md);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.6);
 }
 
-.sphere-chute-glass {
-  position: absolute;
-  inset: 0;
-  height: 56px;
-  background: linear-gradient(180deg, rgba(201, 224, 252, 0.5), rgba(255, 255, 255, 0.85));
-  border: 1px solid rgba(2, 74, 216, 0.2);
-  border-radius: 0 0 var(--rounded-lg) var(--rounded-lg);
-  box-shadow: inset 0 4px 12px rgba(2, 74, 216, 0.08);
-}
-
-.sphere-exit {
-  position: relative;
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 64px;
-  padding: 8px;
-}
-
-.sphere-exit.pop .sphere-ball {
-  animation: exitPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-
-.sphere-exit-placeholder {
-  position: relative;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--graphite);
-  z-index: 1;
-}
-
-.sphere-exit-placeholder::before {
+.slot-reel::before,
+.slot-reel::after {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.85) 0%, transparent 22%),
-    radial-gradient(circle at 50% 55%, #f0f0f0 0%, #d0d0d0 55%, #a8a8a8 100%);
-  box-shadow:
-    inset -3px -5px 10px rgba(0, 0, 0, 0.12),
-    inset 2px 2px 6px rgba(255, 255, 255, 0.5);
-  border: 2px dashed var(--steel);
-}
-
-@keyframes exitPop {
-  from { opacity: 0; transform: scale(0.2) translateY(-20px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-.sphere-flyer {
-  position: absolute;
-  left: 50%;
-  top: 34%;
-  z-index: 20;
+  left: 0;
+  right: 0;
+  height: 14px;
+  z-index: 3;
   pointer-events: none;
-  opacity: 0;
-  transform: translate(-50%, -50%);
 }
 
-.sphere-flyer.active {
-  opacity: 1;
-  animation: ballDrop 0.68s cubic-bezier(0.22, 1.1, 0.36, 1) forwards;
+.slot-reel::before {
+  top: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.85) 0%, transparent 100%);
 }
 
-@keyframes ballDrop {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.2);
-  }
-  12% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1.25);
-  }
-  55% {
-    transform: translate(-50%, 10px) scale(1.05);
-  }
-  100% {
-    opacity: 1;
-    transform: translate(-50%, 118px) scale(1);
-  }
+.slot-reel::after {
+  bottom: 0;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.85) 0%, transparent 100%);
 }
 
-.sphere-status {
+.slot-reel-strip {
+  will-change: transform;
+}
+
+.slot-reel-item {
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slot-reel.spinning {
+  box-shadow:
+    inset 0 4px 12px rgba(0, 0, 0, 0.6),
+    0 0 12px rgba(41, 110, 249, 0.35);
+}
+
+.slot-reel.stopped.winner {
+  animation: slotReelStop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes slotReelStop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+.slot-reel.winner .slot-ball {
+  animation: slotBallWin 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes slotBallWin {
+  0% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.15); filter: brightness(1.25); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+.slot-payline {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 50%;
+  height: 58px;
+  margin-top: -29px;
+  border-top: 2px solid rgba(255, 80, 80, 0.65);
+  border-bottom: 2px solid rgba(255, 80, 80, 0.65);
+  box-shadow: 0 0 14px rgba(255, 80, 80, 0.25);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.slot-side {
+  display: flex;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.slot-lever {
+  position: relative;
+  width: 28px;
+  height: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.slot-lever-knob {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ff7070, var(--bloom-coral) 55%, #c93030);
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.35),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 2;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.slot-lever-arm {
+  width: 8px;
+  height: 72px;
+  margin-top: -4px;
+  background: linear-gradient(90deg, #8a8a8a, #e0e0e0 45%, #8a8a8a);
+  border-radius: 4px;
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.25);
+  transform-origin: top center;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.slot-lever.pulled .slot-lever-knob {
+  transform: translateY(52px);
+}
+
+.slot-lever.pulled .slot-lever-arm {
+  transform: rotate(28deg);
+}
+
+.slot-base {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
   margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.slot-base-light {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--primary-soft);
+  opacity: 0.4;
+  box-shadow: 0 0 6px rgba(201, 224, 252, 0.4);
+}
+
+.slot-stage.is-drawing .slot-base-light {
+  animation: slotBaseChase 0.6s ease-in-out infinite;
+}
+
+.slot-stage.is-drawing .slot-base-light:nth-child(2) { animation-delay: 0.2s; }
+.slot-stage.is-drawing .slot-base-light:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes slotBaseChase {
+  0%, 100% { opacity: 0.3; background: var(--primary-soft); }
+  50% { opacity: 1; background: #fff; box-shadow: 0 0 12px #fff; }
+}
+
+.slot-status {
+  margin-top: 16px;
   text-align: center;
   font-size: 14px;
   font-weight: 500;
@@ -659,158 +613,40 @@ body {
   min-height: 20px;
 }
 
-.sphere-stage.is-drawing .sphere-status {
+.slot-stage.is-drawing .slot-status {
   color: var(--primary);
 }
 
-.sphere-stage.is-complete .sphere-status {
+.slot-stage.is-complete .slot-status {
   color: var(--primary-deep);
   font-weight: 600;
 }
 
-/* ── 추첨공 결과 보드 ── */
-.draw-balls-board {
-  width: 100%;
-  margin-top: 8px;
-  padding: 20px 16px 12px;
-  background: var(--canvas);
-  border: 1px solid var(--hairline);
-  border-radius: var(--rounded-xl);
-  box-shadow: var(--shadow-soft);
-  opacity: 0;
-  transform: translateY(10px);
-  transition: opacity 0.45s ease, transform 0.45s ease;
+.slot-ball {
+  width: 46px !important;
+  height: 46px !important;
 }
 
-.draw-balls-board.visible {
-  opacity: 1;
-  transform: translateY(0);
+.slot-ball .ball-number {
+  font-size: 16px !important;
 }
 
-.draw-balls-title {
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--primary);
-  text-align: center;
-  margin-bottom: 16px;
-}
-
-.draw-balls-row {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.draw-ball-slot {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.draw-ball-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--graphite);
-  white-space: nowrap;
-}
-
-.draw-ball-slot.filled .draw-ball-label {
-  color: var(--primary-deep);
-}
-
-.draw-ball-slot.just-drawn .draw-ball-label {
-  color: var(--primary);
-  animation: labelFlash 0.6s ease;
-}
-
-@keyframes labelFlash {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; transform: scale(1.05); }
-}
-
-.draw-ball-pedestal {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1;
-  max-width: 72px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.slot-ball--idle .ball-surface {
   background:
-    radial-gradient(ellipse at 50% 100%, rgba(2, 74, 216, 0.1) 0%, transparent 65%),
-    linear-gradient(180deg, var(--cloud) 0%, var(--canvas) 100%);
-  border: 1px solid var(--hairline);
-  border-radius: var(--rounded-lg);
-  box-shadow: inset 0 2px 8px rgba(255, 255, 255, 0.8);
-}
-
-.draw-ball-slot.filled .draw-ball-pedestal {
-  border-color: var(--primary-soft);
-  background:
-    radial-gradient(ellipse at 50% 100%, rgba(2, 74, 216, 0.16) 0%, transparent 65%),
-    linear-gradient(180deg, #eef4ff 0%, var(--canvas) 100%);
-}
-
-.draw-ball-empty {
-  position: relative;
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.draw-ball-empty-surface {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.85) 0%, transparent 22%),
-    radial-gradient(circle at 50% 55%, #ececec 0%, #c8c8c8 55%, #a0a0a0 100%);
+    radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.5) 0%, transparent 22%),
+    radial-gradient(circle at 50% 58%, #d8d8d8 0%, #a0a0a0 55%, #707070 100%);
   box-shadow:
-    inset -3px -5px 10px rgba(0, 0, 0, 0.12),
-    inset 2px 2px 6px rgba(255, 255, 255, 0.45);
-  border: 1px dashed var(--steel);
-  opacity: 0.7;
+    inset -4px -6px 10px rgba(0, 0, 0, 0.2),
+    inset 3px 3px 6px rgba(255, 255, 255, 0.3);
 }
 
-.draw-ball-empty-text {
-  position: relative;
-  z-index: 1;
-  font-size: 16px;
-  font-weight: 700;
+.slot-ball--idle .ball-number {
   color: var(--graphite);
+  text-shadow: none;
 }
 
-.draw-ball {
-  width: 52px !important;
-  height: 52px !important;
-}
-
-.draw-ball .ball-number {
-  font-size: 17px !important;
-}
-
-.draw-ball--enter,
-.draw-ball--merge-in {
-  animation: drawMergeIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-
-@keyframes drawBallEnter {
-  0% {
-    opacity: 0;
-    transform: scale(0.2) translateY(-40px);
-  }
-  55% {
-    transform: scale(1.15) translateY(4px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+.slot-ball--idle .ball-highlight {
+  opacity: 0.5;
 }
 
 .balls-display,
@@ -936,212 +772,6 @@ body {
   --ball-light: #69f0ae;
   --ball-mid: #27ae60;
   --ball-dark: #1b7943;
-}
-
-/* ── 파편 조각 공 ── */
-.ball--fragmented .ball-surface,
-.ball--fragmented .ball-highlight {
-  display: none;
-}
-
-.ball-fragments {
-  position: absolute;
-  inset: 0;
-  transform-style: preserve-3d;
-  transform: rotateY(var(--frag-rot, 0deg)) scale(var(--frag-scale, 1));
-  transition: transform 0.1s linear;
-}
-
-.ball-fragment {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 9px;
-  height: 9px;
-  margin: -4.5px;
-  border-radius: 2px;
-  transform-style: preserve-3d;
-  transform:
-    translate3d(
-      calc(var(--fx) * (6px + var(--merge, var(--scatter, 0)) * 20px)),
-      calc(var(--fy) * (6px + var(--merge, var(--scatter, 0)) * 20px)),
-      calc(var(--fz) * (6px + var(--merge, var(--scatter, 0)) * 20px))
-    )
-    rotateX(calc(var(--fy) * 90deg))
-    rotateY(calc(var(--fx) * 90deg));
-  box-shadow:
-    inset -1px -2px 3px rgba(0, 0, 0, 0.25),
-    inset 1px 1px 2px rgba(255, 255, 255, 0.35);
-  transition: transform 0.12s ease-out, opacity 0.12s ease;
-  animation: fragmentShimmer 1.8s ease-in-out infinite;
-  animation-delay: calc(var(--fi, 0) * 0.06s);
-}
-
-.ball.yellow .ball-fragment { background: linear-gradient(135deg, var(--ball-light), var(--ball-mid)); }
-.ball.blue .ball-fragment   { background: linear-gradient(135deg, var(--ball-light), var(--ball-mid)); }
-.ball.red .ball-fragment    { background: linear-gradient(135deg, var(--ball-light), var(--ball-mid)); }
-.ball.gray .ball-fragment   { background: linear-gradient(135deg, var(--ball-light), var(--ball-mid)); }
-.ball.green .ball-fragment  { background: linear-gradient(135deg, var(--ball-light), var(--ball-mid)); }
-
-.ball--scattering .ball-fragment {
-  animation: fragmentShimmer 0.35s ease-in-out infinite alternate, fragmentPulse 0.2s linear infinite;
-}
-
-.ball--merging .ball-fragments {
-  animation: mergePulseRing 0.55s ease-in-out infinite;
-}
-
-.ball--merging .ball-number {
-  animation: mergeNumberGlow 0.55s ease-in-out infinite;
-}
-
-.ball--merged::after {
-  content: '';
-  position: absolute;
-  inset: 2px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.55) 0%, transparent 40%);
-  box-shadow: inset -4px -6px 12px rgba(0, 0, 0, 0.2);
-  opacity: calc(1 - var(--merge, 0) * 4);
-  pointer-events: none;
-  z-index: 1;
-}
-
-.ball--merged .ball-fragment {
-  opacity: calc(0.75 + (1 - var(--merge, 0)) * 0.25);
-}
-
-@keyframes mergePulseRing {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.2); }
-}
-
-@keyframes mergeNumberGlow {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.08); }
-}
-
-.ball--merge-to-solid {
-  transition: --merge 0.45s cubic-bezier(0.34, 1.2, 0.64, 1);
-}
-
-@keyframes drawMergeIn {
-  0% {
-    --merge: 1;
-    transform: scale(0.4);
-    opacity: 0.5;
-  }
-  60% {
-    --merge: 0.35;
-    transform: scale(1.12);
-    opacity: 1;
-  }
-  100% {
-    --merge: 0.15;
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-.ball--fragmented .ball-number {
-  text-shadow:
-    0 0 8px rgba(255, 255, 255, 0.6),
-    0 1px 3px rgba(0, 0, 0, 0.4);
-  z-index: 3;
-}
-
-@keyframes fragmentShimmer {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.15); }
-}
-
-@keyframes fragmentPulse {
-  0%, 100% { opacity: 0.92; }
-  50% { opacity: 1; }
-}
-
-.ball--reassemble {
-  animation: fragmentReassemble 0.68s cubic-bezier(0.22, 1.1, 0.36, 1) forwards;
-}
-
-@keyframes fragmentReassemble {
-  0% {
-    --scatter: 1;
-    transform: scale(0.5);
-    opacity: 0.6;
-  }
-  45% {
-    --scatter: 0.55;
-    transform: scale(1.1);
-    opacity: 1;
-  }
-  100% {
-    --scatter: 0;
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-.fragment-burst {
-  position: absolute;
-  left: 50%;
-  top: 42%;
-  width: 0;
-  height: 0;
-  transform-style: preserve-3d;
-  pointer-events: none;
-  z-index: 25;
-}
-
-.fragment-burst-piece {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  margin: -4px;
-  border-radius: 2px;
-  animation: burstFly 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-}
-
-.fragment-burst.yellow .fragment-burst-piece { background: linear-gradient(135deg, #fff59d, #f5c518); }
-.fragment-burst.blue .fragment-burst-piece   { background: linear-gradient(135deg, #90caf9, #4a90d9); }
-.fragment-burst.red .fragment-burst-piece    { background: linear-gradient(135deg, #ff8a80, #e74c3c); }
-.fragment-burst.gray .fragment-burst-piece   { background: linear-gradient(135deg, #cfd8dc, #7f8c8d); }
-.fragment-burst.green .fragment-burst-piece  { background: linear-gradient(135deg, #69f0ae, #27ae60); }
-
-@keyframes burstFly {
-  0% {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate3d(var(--bx), var(--by), var(--bz)) rotate(var(--br)) scale(0.3);
-  }
-}
-
-.sphere-ball--ghost.ball--fragmented .ball-fragment {
-  opacity: 0.35;
-  filter: saturate(0.5);
-}
-
-.ball.rolling {
-  animation: ballTumble 0.12s linear infinite;
-}
-
-.ball.rolling .ball-fragments {
-  animation: fragmentSpin 0.35s linear infinite;
-}
-
-@keyframes fragmentSpin {
-  from { transform: rotateY(0deg); }
-  to { transform: rotateY(360deg); }
-}
-
-@keyframes ballTumble {
-  0%, 100% { transform: rotateX(0deg) rotateZ(0deg); }
-  25% { transform: rotateX(8deg) rotateZ(4deg); }
-  75% { transform: rotateX(-8deg) rotateZ(-4deg); }
 }
 
 @keyframes popIn {
@@ -1491,49 +1121,52 @@ body {
     width: 100%;
   }
 
-  .draw-balls-row {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px 8px;
-  }
-
-  .draw-ball-pedestal {
-    max-width: 64px;
-  }
-
-  .draw-ball {
-    width: 46px !important;
-    height: 46px !important;
-  }
-
-  .draw-ball .ball-number {
-    font-size: 15px !important;
-  }
-
   .machine-window {
-    min-height: 400px;
-    padding: 24px 12px 20px;
+    min-height: 280px;
+    padding: 24px 8px 20px;
   }
 
-  .sphere-scene {
-    height: 320px;
+  .slot-stage {
+    max-width: 100%;
   }
 
-  .sphere-globe {
-    width: 210px;
-    height: 210px;
+  .slot-cabinet {
+    padding: 10px 10px 8px;
   }
 
-  .sphere-ring--eq,
-  .sphere-ring--mer {
-    width: 190px;
-    height: 190px;
-    margin: -95px;
+  .slot-reels {
+    gap: 4px;
   }
 
-  .sphere-ball {
-    width: 30px !important;
-    height: 30px !important;
-    font-size: 12px !important;
+  .slot-reel {
+    height: 50px;
+  }
+
+  .slot-reel-item {
+    height: 50px;
+  }
+
+  .slot-payline {
+    height: 50px;
+    margin-top: -25px;
+  }
+
+  .slot-ball {
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  .slot-ball .ball-number {
+    font-size: 14px !important;
+  }
+
+  .slot-side {
+    display: none;
+  }
+
+  .slot-marquee-text {
+    font-size: 11px;
+    letter-spacing: 0.14em;
   }
 
   .ball,

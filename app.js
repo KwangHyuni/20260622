@@ -1,13 +1,13 @@
 const MAX = 45;
 const COUNT = 6;
+const REEL_ITEM_HEIGHT = 58;
+const REEL_SPIN_ITEMS = 28;
 
 const ticketCountInput = document.getElementById('ticket-count');
 const decreaseBtn = document.getElementById('decrease');
 const increaseBtn = document.getElementById('increase');
 const drawBtn = document.getElementById('draw-btn');
-const ballsDisplay = document.getElementById('balls-display');
-const drawBallsBoard = document.getElementById('draw-balls-board');
-const drawBallsRow = document.getElementById('draw-balls-row');
+const slotMachineEl = document.getElementById('slot-machine');
 const resultsSection = document.getElementById('results');
 const ticketsList = document.getElementById('tickets-list');
 
@@ -19,41 +19,16 @@ function getBallColor(num) {
   return 'green';
 }
 
-const FRAGMENT_COUNT = 14;
-
-function buildBallContent(ballEl, num, { fragmented = false } = {}) {
+function buildBallContent(ballEl, num) {
   ballEl.innerHTML = '';
-
-  if (fragmented) {
-    const fragments = document.createElement('div');
-    fragments.className = 'ball-fragments';
-    fragments.setAttribute('aria-hidden', 'true');
-
-    for (let i = 0; i < FRAGMENT_COUNT; i++) {
-      const phi = Math.acos(1 - (2 * (i + 0.5)) / FRAGMENT_COUNT);
-      const theta = Math.PI * (1 + Math.sqrt(5)) * i;
-      const fx = Math.sin(phi) * Math.cos(theta);
-      const fy = Math.sin(phi) * Math.sin(theta);
-      const fz = Math.cos(phi);
-      const frag = document.createElement('span');
-      frag.className = 'ball-fragment';
-      frag.style.setProperty('--fi', String(i));
-      frag.style.setProperty('--fx', fx.toFixed(3));
-      frag.style.setProperty('--fy', fy.toFixed(3));
-      frag.style.setProperty('--fz', fz.toFixed(3));
-      fragments.appendChild(frag);
-    }
-    ballEl.appendChild(fragments);
-  } else {
-    const surface = document.createElement('span');
-    surface.className = 'ball-surface';
-    surface.setAttribute('aria-hidden', 'true');
-    const highlight = document.createElement('span');
-    highlight.className = 'ball-highlight';
-    highlight.setAttribute('aria-hidden', 'true');
-    ballEl.appendChild(surface);
-    ballEl.appendChild(highlight);
-  }
+  const surface = document.createElement('span');
+  surface.className = 'ball-surface';
+  surface.setAttribute('aria-hidden', 'true');
+  const highlight = document.createElement('span');
+  highlight.className = 'ball-highlight';
+  highlight.setAttribute('aria-hidden', 'true');
+  ballEl.appendChild(surface);
+  ballEl.appendChild(highlight);
 
   const number = document.createElement('span');
   number.className = 'ball-number';
@@ -61,571 +36,156 @@ function buildBallContent(ballEl, num, { fragmented = false } = {}) {
   ballEl.appendChild(number);
 }
 
-function createBall(num, rolling = false, extraClass = '', { fragmented = false } = {}) {
+function createBall(num, rolling = false, extraClass = '') {
   const color = typeof num === 'number' ? getBallColor(num) : 'gray';
   const ball = document.createElement('div');
-  ball.className = `ball ball-3d ${color}${rolling ? ' rolling' : ''}${fragmented ? ' ball--fragmented' : ''}${extraClass ? ` ${extraClass}` : ''}`;
+  ball.className = `ball ball-3d ${color}${rolling ? ' rolling' : ''}${extraClass ? ` ${extraClass}` : ''}`;
   ball.setAttribute('aria-label', typeof num === 'number' ? `번호 ${num}` : '대기');
-
-  buildBallContent(ball, num, { fragmented });
+  buildBallContent(ball, num);
   return ball;
 }
 
-function spawnFragmentBurst(parent, color) {
-  const burst = document.createElement('div');
-  burst.className = `fragment-burst ${color}`;
-  for (let i = 0; i < 18; i++) {
-    const piece = document.createElement('span');
-    piece.className = 'fragment-burst-piece';
-    const angle = Math.random() * Math.PI * 2;
-    const dist = 28 + Math.random() * 72;
-    piece.style.setProperty('--bx', `${Math.cos(angle) * dist}px`);
-    piece.style.setProperty('--by', `${Math.sin(angle) * dist - 20}px`);
-    piece.style.setProperty('--bz', `${(Math.random() - 0.5) * 40}px`);
-    piece.style.setProperty('--br', `${Math.random() * 540 - 270}deg`);
-    piece.style.animationDelay = `${Math.random() * 0.08}s`;
-    burst.appendChild(piece);
-  }
-  parent.appendChild(burst);
-  setTimeout(() => burst.remove(), 750);
-}
+const slotReels = [];
 
-function applySphereOrientation(wrap, pos) {
-  const len = Math.sqrt(pos.x ** 2 + pos.y ** 2 + pos.z ** 2) || 1;
-  const rotY = (Math.atan2(pos.x, pos.z) * 180) / Math.PI;
-  const rotX = (-Math.asin(pos.y / len) * 180) / Math.PI;
-  wrap.style.transform =
-    `translate3d(${pos.x}px, ${pos.y}px, ${pos.z}px) rotateY(${rotY}deg) rotateX(${rotX}deg)`;
-}
+function buildSlotMachine() {
+  slotMachineEl.innerHTML = '';
+  slotMachineEl.className = 'slot-stage is-idle';
+  slotReels.length = 0;
 
-const SPHERE_BALL_COUNT = 22;
-const SPHERE_INNER_RADIUS = 72;
-const SPHERE_BALL_RADIUS = 17;
-
-let spherePhysics = null;
-
-class SpherePhysics {
-  constructor(container) {
-    this.container = container;
-    this.balls = [];
-    this.running = false;
-    this.rafId = null;
-    this.lastTime = 0;
-    this.time = 0;
-    this.intensity = 1;
-    this.ghost = false;
-    this.numberTick = 0;
-    this.restitution = 0.82;
-    this.damping = 0.998;
-  }
-
-  init(count, ghost = false) {
-    this.destroy(false);
-    this.ghost = ghost;
-    this.container.innerHTML = '';
-
-    for (let i = 0; i < count; i++) {
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1);
-      const r = SPHERE_INNER_RADIUS * (0.25 + Math.random() * 0.65);
-      const x = r * Math.sin(phi) * Math.cos(theta);
-      const y = r * Math.sin(phi) * Math.sin(theta);
-      const z = r * Math.cos(phi);
-      const speed = ghost ? 0 : 40 + Math.random() * 80;
-
-      const wrap = document.createElement('div');
-      wrap.className = 'sphere-ball-wrap';
-      const num = ghost ? '?' : Math.floor(Math.random() * MAX) + 1;
-      const ballEl = createBall(num, false, `sphere-ball${ghost ? ' sphere-ball--ghost' : ''}`, { fragmented: true });
-
-      wrap.appendChild(ballEl);
-      this.container.appendChild(wrap);
-
-      this.balls.push({
-        x, y, z,
-        vx: (Math.random() - 0.5) * speed,
-        vy: (Math.random() - 0.5) * speed,
-        vz: (Math.random() - 0.5) * speed,
-        wrap,
-        ballEl,
-        num,
-        merge: ghost ? 0.55 : 1,
-        mergePulse: 0,
-      });
-    }
-
-    this.balls.forEach((b) => this.syncDOM(b));
-  }
-
-  setGhost(ghost) {
-    this.ghost = ghost;
-    this.balls.forEach((b) => {
-      b.ballEl.classList.toggle('sphere-ball--ghost', ghost);
-      if (ghost) this.setBallNumber(b, '?');
-    });
-  }
-
-  setBallNumber(ball, num) {
-    ball.num = num;
-    const color = typeof num === 'number' ? getBallColor(num) : 'gray';
-    ball.ballEl.className = `ball ball-3d ${color} sphere-ball ball--fragmented${this.ghost ? ' sphere-ball--ghost' : ''}`;
-    ball.ballEl.setAttribute('aria-label', typeof num === 'number' ? `번호 ${num}` : '대기');
-    buildBallContent(ball.ballEl, num, { fragmented: true });
-  }
-
-  randomizeNumbers() {
-    if (this.ghost) return;
-    this.balls.forEach((b) => this.setBallNumber(b, Math.floor(Math.random() * MAX) + 1));
-  }
-
-  setIntensity(value) {
-    this.intensity = value;
-  }
-
-  start() {
-    if (this.running) return;
-    this.running = true;
-    this.lastTime = performance.now();
-    this.loop();
-  }
-
-  stop() {
-    this.running = false;
-    if (this.rafId) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = null;
-    }
-    if (this.container) {
-      this.container.style.transform = 'rotateX(-6deg)';
-    }
-  }
-
-  slowDown(factor = 0.35) {
-    this.balls.forEach((b) => {
-      b.vx *= factor;
-      b.vy *= factor;
-      b.vz *= factor;
-      b.mergePulse = Math.max(b.mergePulse, 0.7);
-    });
-    this.intensity *= factor;
-  }
-
-  loop() {
-    if (!this.running) return;
-
-    const now = performance.now();
-    const dt = Math.min((now - this.lastTime) / 1000, 0.032);
-    this.lastTime = now;
-    this.time += dt;
-
-    this.step(dt);
-    this.rafId = requestAnimationFrame(() => this.loop());
-  }
-
-  step(dt) {
-    const g = 420 * this.intensity;
-    const tumble = this.time * (2.8 + this.intensity * 1.5);
-    const gx = Math.sin(tumble) * g;
-    const gy = Math.cos(tumble * 0.73) * g * 0.85 - 60 * this.intensity;
-    const gz = Math.sin(tumble * 1.37) * g * 0.9;
-
-    this.numberTick += dt;
-    if (!this.ghost && this.intensity > 0.4 && this.numberTick > 0.09) {
-      this.numberTick = 0;
-      this.randomizeNumbers();
-    }
-
-    for (const b of this.balls) {
-      b.vx += gx * dt + (Math.random() - 0.5) * 18 * this.intensity;
-      b.vy += gy * dt + (Math.random() - 0.5) * 18 * this.intensity;
-      b.vz += gz * dt + (Math.random() - 0.5) * 18 * this.intensity;
-
-      b.vx *= this.damping;
-      b.vy *= this.damping;
-      b.vz *= this.damping;
-
-      const maxV = 280 * this.intensity;
-      const vLen = Math.hypot(b.vx, b.vy, b.vz);
-      if (vLen > maxV) {
-        const s = maxV / vLen;
-        b.vx *= s;
-        b.vy *= s;
-        b.vz *= s;
-      }
-
-      b.x += b.vx * dt;
-      b.y += b.vy * dt;
-      b.z += b.vz * dt;
-
-      this.constrainSphere(b);
-    }
-
-    this.resolveBallCollisions();
-
-    for (const b of this.balls) {
-      this.updateMergeState(b, dt);
-      this.syncDOM(b);
-    }
-
-    const wobbleX = Math.sin(this.time * 3.2) * 4 * this.intensity;
-    const wobbleY = this.time * (35 + this.intensity * 25);
-    const wobbleZ = Math.cos(this.time * 2.1) * 3 * this.intensity;
-    this.container.style.transform =
-      `rotateX(${-6 + wobbleX}deg) rotateY(${wobbleY}deg) rotateZ(${wobbleZ}deg)`;
-  }
-
-  constrainSphere(b) {
-    const dist = Math.hypot(b.x, b.y, b.z) || 0.001;
-    const maxDist = SPHERE_INNER_RADIUS;
-
-    if (dist > maxDist) {
-      const nx = b.x / dist;
-      const ny = b.y / dist;
-      const nz = b.z / dist;
-      b.x = nx * maxDist;
-      b.y = ny * maxDist;
-      b.z = nz * maxDist;
-
-      const dot = b.vx * nx + b.vy * ny + b.vz * nz;
-      if (dot > 0) {
-        b.vx -= (1 + this.restitution) * dot * nx;
-        b.vy -= (1 + this.restitution) * dot * ny;
-        b.vz -= (1 + this.restitution) * dot * nz;
-      }
-    }
-  }
-
-  resolveBallCollisions() {
-    const minDist = SPHERE_BALL_RADIUS * 2;
-    const minDistSq = minDist * minDist;
-
-    for (let i = 0; i < this.balls.length; i++) {
-      for (let j = i + 1; j < this.balls.length; j++) {
-        const a = this.balls[i];
-        const b = this.balls[j];
-        const dx = b.x - a.x;
-        const dy = b.y - a.y;
-        const dz = b.z - a.z;
-        const distSq = dx * dx + dy * dy + dz * dz;
-
-        if (distSq >= minDistSq || distSq < 0.001) continue;
-
-        const dist = Math.sqrt(distSq);
-        const nx = dx / dist;
-        const ny = dy / dist;
-        const nz = dz / dist;
-        const overlap = (minDist - dist) * 0.5;
-
-        a.x -= nx * overlap;
-        a.y -= ny * overlap;
-        a.z -= nz * overlap;
-        b.x += nx * overlap;
-        b.y += ny * overlap;
-        b.z += nz * overlap;
-
-        const relVx = b.vx - a.vx;
-        const relVy = b.vy - a.vy;
-        const relVz = b.vz - a.vz;
-        const relDot = relVx * nx + relVy * ny + relVz * nz;
-
-        if (relDot > 0) continue;
-
-        const impulse = (-(1 + this.restitution) * relDot) / 2;
-        a.vx -= impulse * nx;
-        a.vy -= impulse * ny;
-        a.vz -= impulse * nz;
-        b.vx += impulse * nx;
-        b.vy += impulse * ny;
-        b.vz += impulse * nz;
-
-        if (Math.abs(relDot) < 95) {
-          a.mergePulse = Math.min(1, a.mergePulse + 0.45);
-          b.mergePulse = Math.min(1, b.mergePulse + 0.45);
-        }
-      }
-    }
-  }
-
-  updateMergeState(b, dt) {
-    const spin = Math.hypot(b.vx, b.vy, b.vz);
-    let target = Math.min(spin / 65, 1) * this.intensity;
-
-    if (b.mergePulse > 0) {
-      target = Math.max(0, target - b.mergePulse * 0.65);
-      b.mergePulse = Math.max(0, b.mergePulse - dt * 1.8);
-    }
-
-    b.merge += (target - b.merge) * Math.min(1, dt * 14);
-    b.merge = Math.max(0, Math.min(1, b.merge));
-  }
-
-  syncDOM(b) {
-    applySphereOrientation(b.wrap, { x: b.x, y: b.y, z: b.z });
-
-    const spin = Math.hypot(b.vx, b.vy, b.vz);
-    const merge = b.merge ?? 0;
-
-    b.ballEl.style.setProperty('--merge', merge.toFixed(3));
-    b.ballEl.style.setProperty('--scatter', merge.toFixed(3));
-    b.ballEl.classList.toggle('ball--scattering', merge > 0.35);
-    b.ballEl.classList.toggle('ball--merging', merge > 0.12 && merge < 0.72);
-    b.ballEl.classList.toggle('ball--merged', merge < 0.12);
-
-    const frags = b.ballEl.querySelector('.ball-fragments');
-    if (frags) {
-      frags.style.setProperty('--frag-rot', `${this.time * (80 + spin * 0.25)}deg`);
-      frags.style.setProperty('--frag-scale', (1 - merge * 0.08).toFixed(3));
-    }
-
-    if (spin > 30) {
-      b.ballEl.classList.add('rolling');
-    } else {
-      b.ballEl.classList.remove('rolling');
-    }
-  }
-
-  pickEjectBall() {
-    if (!this.balls.length) return null;
-    return this.balls.reduce((best, b) => (b.y > best.y ? b : best), this.balls[0]);
-  }
-
-  hideBall(ball) {
-    ball.wrap.style.visibility = 'hidden';
-    ball.wrap.style.pointerEvents = 'none';
-  }
-
-  destroy(clearContainer = true) {
-    this.stop();
-    this.balls = [];
-    if (clearContainer && this.container) {
-      this.container.innerHTML = '';
-    }
-  }
-}
-
-async function tumblePhysics(durationMs, intensity = 1) {
-  if (!spherePhysics) return;
-  spherePhysics.setIntensity(intensity);
-  spherePhysics.start();
-  await sleep(durationMs);
-}
-
-function buildSphereMachine() {
-  ballsDisplay.innerHTML = '';
-  ballsDisplay.className = 'sphere-stage';
-
-  const scene = document.createElement('div');
-  scene.className = 'sphere-scene';
-
-  scene.innerHTML = `
-    <div class="sphere-glow" id="sphere-glow"></div>
-    <div class="sphere-assembly">
-      <div class="sphere-globe" id="sphere-globe">
-        <div class="sphere-wire">
-          <span class="sphere-ring sphere-ring--eq" style="transform: rotateX(0deg)"></span>
-          <span class="sphere-ring sphere-ring--eq" style="transform: rotateX(45deg)"></span>
-          <span class="sphere-ring sphere-ring--eq" style="transform: rotateX(90deg)"></span>
-          <span class="sphere-ring sphere-ring--mer" style="transform: rotateY(0deg)"></span>
-          <span class="sphere-ring sphere-ring--mer" style="transform: rotateY(60deg)"></span>
-          <span class="sphere-ring sphere-ring--mer" style="transform: rotateY(120deg)"></span>
-        </div>
-        <div class="sphere-tumbler" id="sphere-tumbler"></div>
-        <div class="sphere-glass"></div>
-        <div class="sphere-shine"></div>
+  slotMachineEl.innerHTML = `
+    <div class="slot-cabinet">
+      <div class="slot-top">
+        <span class="slot-marquee-dot"></span>
+        <span class="slot-marquee-text">LOTTO 6 / 45</span>
+        <span class="slot-marquee-dot"></span>
       </div>
-      <div class="sphere-neck"></div>
-      <div class="sphere-chute">
-        <div class="sphere-chute-glass"></div>
-        <div class="sphere-exit" id="sphere-exit">
-          <span class="sphere-exit-placeholder">?</span>
+      <div class="slot-body">
+        <div class="slot-window">
+          <div class="slot-window-shine" aria-hidden="true"></div>
+          <div class="slot-reels" id="slot-reels"></div>
+          <div class="slot-payline" aria-hidden="true"></div>
         </div>
+        <div class="slot-side">
+          <div class="slot-lever" id="slot-lever" aria-hidden="true">
+            <span class="slot-lever-knob"></span>
+            <span class="slot-lever-arm"></span>
+          </div>
+        </div>
+      </div>
+      <div class="slot-base">
+        <span class="slot-base-light"></span>
+        <span class="slot-base-light"></span>
+        <span class="slot-base-light"></span>
       </div>
     </div>
-    <div class="sphere-flyer" id="sphere-flyer"></div>
-    <p class="sphere-status" id="sphere-status">추첨을 시작하세요</p>
+    <p class="slot-status" id="slot-status">추첨을 시작하세요</p>
   `;
 
-  ballsDisplay.appendChild(scene);
-}
+  const reelsContainer = document.getElementById('slot-reels');
+  for (let i = 0; i < COUNT; i++) {
+    const reel = document.createElement('div');
+    reel.className = 'slot-reel';
+    reel.dataset.index = String(i);
 
-function fillTumblerGhost() {
-  if (!spherePhysics) return;
-  spherePhysics.init(SPHERE_BALL_COUNT, true);
-}
+    const strip = document.createElement('div');
+    strip.className = 'slot-reel-strip';
+    strip.appendChild(createReelItem('?'));
+    reel.appendChild(strip);
+    reelsContainer.appendChild(reel);
 
-function startPhysicsDraw() {
-  if (!spherePhysics) return;
-  spherePhysics.setGhost(false);
-  spherePhysics.balls.forEach((b) => {
-    const speed = 120 + Math.random() * 160;
-    b.vx = (Math.random() - 0.5) * speed;
-    b.vy = (Math.random() - 0.5) * speed;
-    b.vz = (Math.random() - 0.5) * speed;
-    b.merge = 1;
-    b.mergePulse = 0;
-    spherePhysics.setBallNumber(b, Math.floor(Math.random() * MAX) + 1);
-  });
-}
-
-function setSphereState(state) {
-  ballsDisplay.classList.toggle('is-drawing', state === 'drawing');
-  ballsDisplay.classList.toggle('is-complete', state === 'complete');
-  ballsDisplay.classList.toggle('is-idle', state === 'idle');
-
-  const tumbler = document.getElementById('sphere-tumbler');
-  const globe = document.getElementById('sphere-globe');
-  const status = document.getElementById('sphere-status');
-
-  if (tumbler) {
-    tumbler.classList.toggle('physics-active', state === 'drawing' || state === 'ejecting');
+    slotReels.push({ reel, strip });
   }
-  if (globe) globe.classList.toggle('rumble', state === 'drawing');
+}
 
+function createReelItem(num) {
+  const item = document.createElement('div');
+  item.className = 'slot-reel-item';
+  const ball = typeof num === 'number'
+    ? createBall(num, false, 'slot-ball')
+    : createBall('?', false, 'slot-ball slot-ball--idle');
+  item.appendChild(ball);
+  return item;
+}
+
+function buildReelStrip(finalNum) {
+  const items = [];
+  for (let i = 0; i < REEL_SPIN_ITEMS - 1; i++) {
+    items.push(Math.floor(Math.random() * MAX) + 1);
+  }
+  items.push(finalNum);
+  return items;
+}
+
+function setSlotState(state) {
+  slotMachineEl.classList.toggle('is-drawing', state === 'drawing');
+  slotMachineEl.classList.toggle('is-complete', state === 'complete');
+  slotMachineEl.classList.toggle('is-idle', state === 'idle');
+
+  const lever = document.getElementById('slot-lever');
+  if (lever) lever.classList.toggle('pulled', state === 'drawing');
+
+  const status = document.getElementById('slot-status');
   if (status) {
     const labels = {
       idle: '추첨을 시작하세요',
-      drawing: '파편이 흩어지며 섞이는 중…',
-      ejecting: '파편 합체 · 추첨공 추출!',
-      complete: '합체 완료!',
+      drawing: '릴이 돌아가는 중…',
+      complete: '추첨 완료!',
     };
     status.textContent = labels[state] ?? labels.idle;
   }
 }
 
-function createDrawBall(num, animate = false) {
-  const ball = createBall(num, false, 'draw-ball', { fragmented: true });
-  ball.style.setProperty('--merge', '1');
-  if (animate) ball.classList.add('draw-ball--merge-in');
-  return ball;
+function easeOutCubic(t) {
+  return 1 - (1 - t) ** 3;
 }
 
-async function mergeBallToSolid(ballEl, num) {
-  const extraClass = ballEl.classList.contains('draw-ball') ? 'draw-ball' : 'sphere-ball';
-  ballEl.classList.add('ball--merge-to-solid');
-  ballEl.style.setProperty('--merge', '0');
-  ballEl.style.setProperty('--scatter', '0');
-  await sleep(420);
-  const color = getBallColor(num);
-  ballEl.className = `ball ball-3d ${color} ${extraClass}`;
-  buildBallContent(ballEl, num, { fragmented: false });
-}
+function spinReel(strip, finalNum, durationMs) {
+  strip.innerHTML = '';
+  const numbers = buildReelStrip(finalNum);
+  numbers.forEach((n) => strip.appendChild(createReelItem(n)));
 
-function initDrawBallsRow() {
-  if (!drawBallsRow) return;
+  const totalOffset = (numbers.length - 1) * REEL_ITEM_HEIGHT;
+  const overshoot = REEL_ITEM_HEIGHT * 0.35;
+  const start = performance.now();
 
-  drawBallsRow.innerHTML = '';
-  for (let i = 0; i < COUNT; i++) {
-    const slot = document.createElement('div');
-    slot.className = 'draw-ball-slot';
-    slot.dataset.index = String(i);
-    slot.innerHTML = `
-      <span class="draw-ball-label">추첨공 ${i + 1}</span>
-      <div class="draw-ball-pedestal">
-        <div class="draw-ball-empty">
-          <span class="draw-ball-empty-surface"></span>
-          <span class="draw-ball-empty-text">?</span>
-        </div>
-      </div>
-    `;
-    drawBallsRow.appendChild(slot);
-  }
-}
+  return new Promise((resolve) => {
+    function frame(now) {
+      const t = Math.min((now - start) / durationMs, 1);
+      const eased = easeOutCubic(t);
+      let offset = eased * (totalOffset + overshoot);
+      if (t >= 1) offset = totalOffset;
+      strip.style.transform = `translate3d(0, ${-offset}px, 0)`;
 
-async function setDrawBallSlot(index, num, animate = true) {
-  const slot = drawBallsRow?.querySelector(`.draw-ball-slot[data-index="${index}"]`);
-  if (!slot) return;
-
-  const pedestal = slot.querySelector('.draw-ball-pedestal');
-  if (!pedestal) return;
-
-  pedestal.innerHTML = '';
-  const ball = createDrawBall(num, animate);
-  pedestal.appendChild(ball);
-  slot.classList.add('filled');
-  slot.classList.toggle('just-drawn', animate);
-
-  if (animate) {
-    await sleep(520);
-    await mergeBallToSolid(ball, num);
-  }
-}
-
-function showDrawBallsBoard(show) {
-  if (!drawBallsBoard) return;
-  drawBallsBoard.hidden = !show;
-  drawBallsBoard.classList.toggle('visible', show);
-}
-
-function renderDrawBalls(numbers, { animateIndex = -1 } = {}) {
-  showDrawBallsBoard(true);
-  numbers.forEach((num, i) => {
-    setDrawBallSlot(i, num, i === animateIndex);
+      if (t < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        strip.style.transform = `translate3d(0, ${-totalOffset}px, 0)`;
+        resolve();
+      }
+    }
+    requestAnimationFrame(frame);
   });
 }
 
-function renderPlaceholder() {
-  if (spherePhysics) spherePhysics.destroy();
-  buildSphereMachine();
-  spherePhysics = new SpherePhysics(document.getElementById('sphere-tumbler'));
-  fillTumblerGhost();
-  initDrawBallsRow();
-  showDrawBallsBoard(true);
-  setSphereState('idle');
 
-  const exit = document.getElementById('sphere-exit');
-  if (exit) {
-    exit.innerHTML = '<span class="sphere-exit-placeholder">?</span>';
-    exit.classList.remove('pop');
-  }
-}
+async function animateDraw(numbers) {
+  buildSlotMachine();
+  setSlotState('drawing');
 
-async function ejectBall(num) {
-  setSphereState('ejecting');
+  await sleep(300);
 
-  const color = getBallColor(num);
-  const scene = document.querySelector('.sphere-scene');
-
-  if (spherePhysics) {
-    const target = spherePhysics.pickEjectBall();
-    if (target) {
-      spawnFragmentBurst(scene, color);
-      spherePhysics.hideBall(target);
-    }
-    spherePhysics.slowDown(0.25);
-    await sleep(120);
-    spherePhysics.stop();
+  for (let i = 0; i < COUNT; i++) {
+    const { strip, reel } = slotReels[i];
+    reel.classList.add('spinning');
+    const duration = 1600 + i * 420;
+    await spinReel(strip, numbers[i], duration);
+    reel.classList.remove('spinning');
+    reel.classList.add('stopped', 'winner');
+    await sleep(180);
   }
 
-  const flyer = document.getElementById('sphere-flyer');
-  const exit = document.getElementById('sphere-exit');
-
-  if (flyer) {
-    flyer.innerHTML = '';
-    const flyBall = createBall(num, false, 'sphere-ball sphere-ball--fly ball--reassemble', { fragmented: true });
-    flyBall.style.setProperty('--merge', '1');
-    flyBall.style.setProperty('--scatter', '1');
-    flyer.appendChild(flyBall);
-    flyer.classList.remove('active');
-    void flyer.offsetWidth;
-    flyer.classList.add('active');
-  }
-
-  await sleep(680);
-
-  if (flyer) flyer.classList.remove('active');
-  if (exit) {
-    exit.innerHTML = '';
-    const ball = createBall(num, false, 'sphere-ball ball--fragmented ball--merge-to-solid', { fragmented: true });
-    ball.style.setProperty('--merge', '1');
-    exit.appendChild(ball);
-    exit.classList.remove('pop');
-    void exit.offsetWidth;
-    exit.classList.add('pop');
-    requestAnimationFrame(() => ball.style.setProperty('--merge', '0'));
-    setTimeout(() => mergeBallToSolid(ball, num), 450);
-  }
-
-  await sleep(280);
+  setSlotState('complete');
+  await sleep(400);
 }
 
 function generateNumbers() {
@@ -644,13 +204,6 @@ function generateTickets(count) {
   return Array.from({ length: count }, () => generateNumbers());
 }
 
-function createPlaceholderBall() {
-  const ball = document.createElement('span');
-  ball.className = 'placeholder-ball';
-  ball.textContent = '?';
-  return ball;
-}
-
 function renderResults(tickets) {
   ticketsList.innerHTML = '';
 
@@ -665,7 +218,7 @@ function renderResults(tickets) {
 
     const balls = document.createElement('div');
     balls.className = 'ticket-balls';
-    numbers.forEach((num) => balls.appendChild(createBall(num, false, 'draw-ball')));
+    numbers.forEach((num) => balls.appendChild(createBall(num, false, 'slot-ball')));
 
     ticket.appendChild(label);
     ticket.appendChild(balls);
@@ -677,37 +230,6 @@ function renderResults(tickets) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function animateDraw(numbers) {
-  renderPlaceholder();
-  showDrawBallsBoard(true);
-  setSphereState('drawing');
-  startPhysicsDraw();
-  spherePhysics.start();
-
-  await sleep(500);
-
-  for (let i = 0; i < COUNT; i++) {
-    const intensity = 1 + i * 0.18;
-    const tumbleMs = 2000 + i * 450;
-    await tumblePhysics(tumbleMs, intensity);
-
-    await ejectBall(numbers[i]);
-    await setDrawBallSlot(i, numbers[i], true);
-
-    if (i < COUNT - 1) {
-      setSphereState('drawing');
-      startPhysicsDraw();
-      spherePhysics.start();
-      await sleep(200);
-    }
-  }
-
-  if (spherePhysics) spherePhysics.stop();
-  setSphereState('complete');
-  renderDrawBalls(numbers);
-  await sleep(300);
 }
 
 async function draw() {
@@ -739,7 +261,8 @@ decreaseBtn.addEventListener('click', () => updateTicketCount(-1));
 increaseBtn.addEventListener('click', () => updateTicketCount(1));
 drawBtn.addEventListener('click', draw);
 
-renderPlaceholder();
+buildSlotMachine();
+setSlotState('idle');
 
 const LOTTO_API = 'https://smok95.github.io/lotto/results/all.json';
 const drawPanel = document.getElementById('draw-panel');
@@ -767,11 +290,6 @@ function formatPrize(amount) {
     return `${Number.isInteger(eok) ? eok : eok.toFixed(1)}억원`;
   }
   return `${Math.round(amount / 10000).toLocaleString()}만원`;
-}
-
-function formatMoney(amount) {
-  if (!amount) return '-';
-  return `${amount.toLocaleString()}원`;
 }
 
 function getFirstPrize(draw) {
