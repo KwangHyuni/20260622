@@ -19,28 +19,75 @@ function getBallColor(num) {
   return 'green';
 }
 
-function createBall(num, rolling = false, extraClass = '') {
-  const color = typeof num === 'number' ? getBallColor(num) : 'gray';
-  const ball = document.createElement('div');
-  ball.className = `ball ball-3d ${color}${rolling ? ' rolling' : ''}${extraClass ? ` ${extraClass}` : ''}`;
-  ball.setAttribute('aria-label', typeof num === 'number' ? `번호 ${num}` : '대기');
+const FRAGMENT_COUNT = 14;
 
-  const surface = document.createElement('span');
-  surface.className = 'ball-surface';
-  surface.setAttribute('aria-hidden', 'true');
+function buildBallContent(ballEl, num, { fragmented = false } = {}) {
+  ballEl.innerHTML = '';
 
-  const highlight = document.createElement('span');
-  highlight.className = 'ball-highlight';
-  highlight.setAttribute('aria-hidden', 'true');
+  if (fragmented) {
+    const fragments = document.createElement('div');
+    fragments.className = 'ball-fragments';
+    fragments.setAttribute('aria-hidden', 'true');
+
+    for (let i = 0; i < FRAGMENT_COUNT; i++) {
+      const phi = Math.acos(1 - (2 * (i + 0.5)) / FRAGMENT_COUNT);
+      const theta = Math.PI * (1 + Math.sqrt(5)) * i;
+      const fx = Math.sin(phi) * Math.cos(theta);
+      const fy = Math.sin(phi) * Math.sin(theta);
+      const fz = Math.cos(phi);
+      const frag = document.createElement('span');
+      frag.className = 'ball-fragment';
+      frag.style.setProperty('--fi', String(i));
+      frag.style.setProperty('--fx', fx.toFixed(3));
+      frag.style.setProperty('--fy', fy.toFixed(3));
+      frag.style.setProperty('--fz', fz.toFixed(3));
+      fragments.appendChild(frag);
+    }
+    ballEl.appendChild(fragments);
+  } else {
+    const surface = document.createElement('span');
+    surface.className = 'ball-surface';
+    surface.setAttribute('aria-hidden', 'true');
+    const highlight = document.createElement('span');
+    highlight.className = 'ball-highlight';
+    highlight.setAttribute('aria-hidden', 'true');
+    ballEl.appendChild(surface);
+    ballEl.appendChild(highlight);
+  }
 
   const number = document.createElement('span');
   number.className = 'ball-number';
   number.textContent = num;
+  ballEl.appendChild(number);
+}
 
-  ball.appendChild(surface);
-  ball.appendChild(highlight);
-  ball.appendChild(number);
+function createBall(num, rolling = false, extraClass = '', { fragmented = false } = {}) {
+  const color = typeof num === 'number' ? getBallColor(num) : 'gray';
+  const ball = document.createElement('div');
+  ball.className = `ball ball-3d ${color}${rolling ? ' rolling' : ''}${fragmented ? ' ball--fragmented' : ''}${extraClass ? ` ${extraClass}` : ''}`;
+  ball.setAttribute('aria-label', typeof num === 'number' ? `번호 ${num}` : '대기');
+
+  buildBallContent(ball, num, { fragmented });
   return ball;
+}
+
+function spawnFragmentBurst(parent, color) {
+  const burst = document.createElement('div');
+  burst.className = `fragment-burst ${color}`;
+  for (let i = 0; i < 18; i++) {
+    const piece = document.createElement('span');
+    piece.className = 'fragment-burst-piece';
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 28 + Math.random() * 72;
+    piece.style.setProperty('--bx', `${Math.cos(angle) * dist}px`);
+    piece.style.setProperty('--by', `${Math.sin(angle) * dist - 20}px`);
+    piece.style.setProperty('--bz', `${(Math.random() - 0.5) * 40}px`);
+    piece.style.setProperty('--br', `${Math.random() * 540 - 270}deg`);
+    piece.style.animationDelay = `${Math.random() * 0.08}s`;
+    burst.appendChild(piece);
+  }
+  parent.appendChild(burst);
+  setTimeout(() => burst.remove(), 750);
 }
 
 function applySphereOrientation(wrap, pos) {
@@ -89,7 +136,7 @@ class SpherePhysics {
       const wrap = document.createElement('div');
       wrap.className = 'sphere-ball-wrap';
       const num = ghost ? '?' : Math.floor(Math.random() * MAX) + 1;
-      const ballEl = createBall(num, false, `sphere-ball${ghost ? ' sphere-ball--ghost' : ''}`);
+      const ballEl = createBall(num, false, `sphere-ball${ghost ? ' sphere-ball--ghost' : ''}`, { fragmented: true });
 
       wrap.appendChild(ballEl);
       this.container.appendChild(wrap);
@@ -119,23 +166,9 @@ class SpherePhysics {
   setBallNumber(ball, num) {
     ball.num = num;
     const color = typeof num === 'number' ? getBallColor(num) : 'gray';
-    ball.ballEl.className = `ball ball-3d ${color} sphere-ball${this.ghost ? ' sphere-ball--ghost' : ''}`;
+    ball.ballEl.className = `ball ball-3d ${color} sphere-ball ball--fragmented${this.ghost ? ' sphere-ball--ghost' : ''}`;
     ball.ballEl.setAttribute('aria-label', typeof num === 'number' ? `번호 ${num}` : '대기');
-
-    const surface = document.createElement('span');
-    surface.className = 'ball-surface';
-    surface.setAttribute('aria-hidden', 'true');
-    const highlight = document.createElement('span');
-    highlight.className = 'ball-highlight';
-    highlight.setAttribute('aria-hidden', 'true');
-    const number = document.createElement('span');
-    number.className = 'ball-number';
-    number.textContent = num;
-
-    ball.ballEl.innerHTML = '';
-    ball.ballEl.appendChild(surface);
-    ball.ballEl.appendChild(highlight);
-    ball.ballEl.appendChild(number);
+    buildBallContent(ball.ballEl, num, { fragmented: true });
   }
 
   randomizeNumbers() {
@@ -307,11 +340,30 @@ class SpherePhysics {
   syncDOM(b) {
     applySphereOrientation(b.wrap, { x: b.x, y: b.y, z: b.z });
     const spin = Math.hypot(b.vx, b.vy, b.vz);
+    const scatter = Math.min(spin / 90, 1) * this.intensity * 0.9;
+    b.ballEl.style.setProperty('--scatter', scatter.toFixed(3));
+    b.ballEl.classList.toggle('ball--scattering', scatter > 0.2);
+
+    const frags = b.ballEl.querySelector('.ball-fragments');
+    if (frags) {
+      frags.style.setProperty('--frag-rot', `${this.time * (120 + spin * 0.4)}deg`);
+    }
+
     if (spin > 30) {
       b.ballEl.classList.add('rolling');
     } else {
       b.ballEl.classList.remove('rolling');
     }
+  }
+
+  pickEjectBall() {
+    if (!this.balls.length) return null;
+    return this.balls.reduce((best, b) => (b.y > best.y ? b : best), this.balls[0]);
+  }
+
+  hideBall(ball) {
+    ball.wrap.style.visibility = 'hidden';
+    ball.wrap.style.pointerEvents = 'none';
   }
 
   destroy(clearContainer = true) {
@@ -482,7 +534,15 @@ function renderPlaceholder() {
 async function ejectBall(num) {
   setSphereState('ejecting');
 
+  const color = getBallColor(num);
+  const scene = document.querySelector('.sphere-scene');
+
   if (spherePhysics) {
+    const target = spherePhysics.pickEjectBall();
+    if (target) {
+      spawnFragmentBurst(scene, color);
+      spherePhysics.hideBall(target);
+    }
     spherePhysics.slowDown(0.25);
     await sleep(120);
     spherePhysics.stop();
@@ -493,7 +553,9 @@ async function ejectBall(num) {
 
   if (flyer) {
     flyer.innerHTML = '';
-    flyer.appendChild(createBall(num, false, 'sphere-ball sphere-ball--fly'));
+    const flyBall = createBall(num, false, 'sphere-ball sphere-ball--fly ball--reassemble', { fragmented: true });
+    flyBall.style.setProperty('--scatter', '1');
+    flyer.appendChild(flyBall);
     flyer.classList.remove('active');
     void flyer.offsetWidth;
     flyer.classList.add('active');

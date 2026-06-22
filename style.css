@@ -937,21 +937,147 @@ body {
   --ball-dark: #1b7943;
 }
 
-.ball.rolling .ball-surface {
-  animation: ballSpinY 0.35s linear infinite;
+/* ── 파편 조각 공 ── */
+.ball--fragmented .ball-surface,
+.ball--fragmented .ball-highlight {
+  display: none;
 }
 
-.ball.rolling .ball-highlight {
-  animation: ballSpinY 0.35s linear infinite;
+.ball-fragments {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateY(var(--frag-rot, 0deg));
+  transition: transform 0.08s linear;
 }
 
-@keyframes ballSpinY {
-  from { transform: rotateY(0deg); }
-  to { transform: rotateY(360deg); }
+.ball-fragment {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px;
+  border-radius: 2px;
+  transform-style: preserve-3d;
+  transform:
+    translate3d(
+      calc(var(--fx) * (12px + var(--scatter, 0) * 14px)),
+      calc(var(--fy) * (12px + var(--scatter, 0) * 14px)),
+      calc(var(--fz) * (12px + var(--scatter, 0) * 14px))
+    )
+    rotateX(calc(var(--fy) * 90deg))
+    rotateY(calc(var(--fx) * 90deg));
+  box-shadow:
+    inset -1px -2px 3px rgba(0, 0, 0, 0.25),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.35);
+  animation: fragmentShimmer 1.8s ease-in-out infinite;
+  animation-delay: calc(var(--fi, 0) * 0.06s);
+}
+
+.ball.yellow .ball-fragment { background: linear-gradient(135deg, var(--ball-light), var(--ball-mid)); }
+.ball.blue .ball-fragment   { background: linear-gradient(135deg, var(--ball-light), var(--ball-mid)); }
+.ball.red .ball-fragment    { background: linear-gradient(135deg, var(--ball-light), var(--ball-mid)); }
+.ball.gray .ball-fragment   { background: linear-gradient(135deg, var(--ball-light), var(--ball-mid)); }
+.ball.green .ball-fragment  { background: linear-gradient(135deg, var(--ball-light), var(--ball-mid)); }
+
+.ball--scattering .ball-fragment {
+  animation: fragmentShimmer 0.35s ease-in-out infinite alternate, fragmentPulse 0.2s linear infinite;
+}
+
+.ball--fragmented .ball-number {
+  text-shadow:
+    0 0 8px rgba(255, 255, 255, 0.6),
+    0 1px 3px rgba(0, 0, 0, 0.4);
+  z-index: 3;
+}
+
+@keyframes fragmentShimmer {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.15); }
+}
+
+@keyframes fragmentPulse {
+  0%, 100% { opacity: 0.92; }
+  50% { opacity: 1; }
+}
+
+.ball--reassemble {
+  animation: fragmentReassemble 0.68s cubic-bezier(0.22, 1.1, 0.36, 1) forwards;
+}
+
+@keyframes fragmentReassemble {
+  0% {
+    --scatter: 1;
+    transform: scale(0.5);
+    opacity: 0.6;
+  }
+  45% {
+    --scatter: 0.55;
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    --scatter: 0;
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.fragment-burst {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+  pointer-events: none;
+  z-index: 25;
+}
+
+.fragment-burst-piece {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin: -4px;
+  border-radius: 2px;
+  animation: burstFly 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.fragment-burst.yellow .fragment-burst-piece { background: linear-gradient(135deg, #fff59d, #f5c518); }
+.fragment-burst.blue .fragment-burst-piece   { background: linear-gradient(135deg, #90caf9, #4a90d9); }
+.fragment-burst.red .fragment-burst-piece    { background: linear-gradient(135deg, #ff8a80, #e74c3c); }
+.fragment-burst.gray .fragment-burst-piece   { background: linear-gradient(135deg, #cfd8dc, #7f8c8d); }
+.fragment-burst.green .fragment-burst-piece  { background: linear-gradient(135deg, #69f0ae, #27ae60); }
+
+@keyframes burstFly {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--bx), var(--by), var(--bz)) rotate(var(--br)) scale(0.3);
+  }
+}
+
+.sphere-ball--ghost.ball--fragmented .ball-fragment {
+  opacity: 0.35;
+  filter: saturate(0.5);
 }
 
 .ball.rolling {
   animation: ballTumble 0.12s linear infinite;
+}
+
+.ball.rolling .ball-fragments {
+  animation: fragmentSpin 0.35s linear infinite;
+}
+
+@keyframes fragmentSpin {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(360deg); }
 }
 
 @keyframes ballTumble {
