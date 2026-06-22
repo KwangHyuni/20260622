@@ -1,0 +1,7 @@
+{
+  "name": "lotto-saju",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  }
+}

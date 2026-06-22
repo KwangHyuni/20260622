@@ -11,7 +11,7 @@
 </head>
 <body>
   <div class="utility-strip">
-    <span>로또 6/45 · 번호 추첨 · 역대 당첨 조회</span>
+    <span>로또 6/45 · 번호 추첨 · 사주 번호 · 역대 당첨 조회</span>
     <a href="https://www.dhlottery.co.kr" target="_blank" rel="noopener">동행복권 바로가기</a>
   </div>
 
@@ -27,7 +27,7 @@
         <div class="hero-copy">
           <span class="eyebrow">Lotto 6/45</span>
           <h1>로또 추첨기</h1>
-          <p class="hero-lead">1~45 번호 중 6개를 무작위로 추첨하고, 1회부터 최신 회차까지 1등 당첨 내역을 조회할 수 있습니다.</p>
+          <p class="hero-lead">1~45 번호 추첨, 사주 기반 번호 상담, 1회부터 최신 회차까지 1등 당첨 내역을 조회할 수 있습니다.</p>
         </div>
       </div>
       <div class="chevron-decoration chevron-right" aria-hidden="true"></div>
@@ -36,6 +36,7 @@
     <div class="content-wrap">
       <nav class="tabs" role="tablist" aria-label="기능 선택">
         <button type="button" class="tab active" data-tab="draw" role="tab" aria-selected="true">번호 추첨</button>
+        <button type="button" class="tab" data-tab="chatbot" role="tab" aria-selected="false">사주 번호</button>
         <button type="button" class="tab" data-tab="history" role="tab" aria-selected="false">역대 1등 조회</button>
       </nav>
 
@@ -67,6 +68,50 @@
         </section>
       </section>
 
+      <section id="chatbot-panel" class="panel" hidden>
+        <section class="chatbot card-product">
+          <h2 class="section-title">사주 로또 상담</h2>
+          <p class="chatbot-lead">성별과 생년월일을 입력하면 Gemini AI가 사주를 바탕으로 로또 번호와 추천 이유를 설명합니다.</p>
+
+          <form id="saju-form" class="saju-form card-section">
+            <div class="saju-form-row">
+              <fieldset class="saju-field">
+                <legend>성별</legend>
+                <div class="gender-options">
+                  <label class="gender-option">
+                    <input type="radio" name="chat-gender" value="male">
+                    <span>남성</span>
+                  </label>
+                  <label class="gender-option">
+                    <input type="radio" name="chat-gender" value="female">
+                    <span>여성</span>
+                  </label>
+                </div>
+              </fieldset>
+              <div class="saju-field">
+                <label for="chat-birth">생년월일 (양력)</label>
+                <input type="date" id="chat-birth" class="text-input" required>
+              </div>
+            </div>
+            <button type="submit" id="chat-recommend-btn" class="btn-primary chat-recommend-btn">
+              사주 번호 추천
+            </button>
+          </form>
+
+          <div id="chat-loading" class="chat-loading" hidden>사주를 분석하는 중…</div>
+          <div id="chat-error" class="history-error" hidden></div>
+
+          <div id="chat-messages" class="chat-messages" aria-live="polite"></div>
+
+          <div class="chat-input-row">
+            <textarea id="chat-input" class="chat-input text-input" rows="2" placeholder="추가 질문을 입력하세요 (예: 이번 주 운세에 맞는 번호로 바꿔줘)" disabled></textarea>
+            <button type="button" id="chat-send-btn" class="btn-outline chat-send-btn" disabled>전송</button>
+          </div>
+
+          <p class="chat-disclaimer">※ AI 사주·번호 추천은 오락·참고용이며, 당첨을 보장하지 않습니다. 출생시간 미입력 시 일주 중심으로 해석합니다.</p>
+        </section>
+      </section>
+
       <section id="history-panel" class="panel cloud-band" hidden>
         <div class="history-search card-section">
           <label for="round-input">회차 조회</label>
@@ -90,9 +135,10 @@
   </main>
 
   <footer class="footer-dark">
-    <p>※ 번호 추첨은 오락용입니다. 당첨 데이터는 참고용이며, 정확한 정보는 <a href="https://www.dhlottery.co.kr" target="_blank" rel="noopener">동행복권</a>에서 확인하세요.</p>
+    <p>※ 번호 추첨·사주 번호 추천은 오락용입니다. 당첨 데이터는 참고용이며, 정확한 정보는 <a href="https://www.dhlottery.co.kr" target="_blank" rel="noopener">동행복권</a>에서 확인하세요.</p>
   </footer>
 
   <script src="app.js"></script>
+  <script src="chatbot.js"></script>
 </body>
 </html>

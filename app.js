@@ -426,6 +426,7 @@ setSlotState('idle');
 
 const LOTTO_API = 'https://smok95.github.io/lotto/results/all.json';
 const drawPanel = document.getElementById('draw-panel');
+const chatbotPanel = document.getElementById('chatbot-panel');
 const historyPanel = document.getElementById('history-panel');
 const tabs = document.querySelectorAll('.tab');
 const roundInput = document.getElementById('round-input');
@@ -600,6 +601,7 @@ function switchTab(tabName) {
   });
 
   drawPanel.hidden = tabName !== 'draw';
+  chatbotPanel.hidden = tabName !== 'chatbot';
   historyPanel.hidden = tabName !== 'history';
 
   if (tabName === 'history') {
