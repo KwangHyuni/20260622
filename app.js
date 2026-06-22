@@ -52,33 +52,56 @@ function buildSlotMachine() {
   slotMachineEl.className = 'slot-stage is-idle';
   slotReels.length = 0;
 
+  const bulbs = Array.from({ length: 12 }, (_, i) => `<span class="slot-bulb" style="--bi:${i}"></span>`).join('');
+
   slotMachineEl.innerHTML = `
     <div class="slot-cabinet">
-      <div class="slot-top">
-        <span class="slot-marquee-dot"></span>
-        <span class="slot-marquee-text">LOTTO 6 / 45</span>
-        <span class="slot-marquee-dot"></span>
-      </div>
-      <div class="slot-body">
-        <div class="slot-window">
-          <div class="slot-window-shine" aria-hidden="true"></div>
-          <div class="slot-reels" id="slot-reels"></div>
-          <div class="slot-payline" aria-hidden="true"></div>
+      <div class="slot-crown" aria-hidden="true">
+        <div class="slot-crown-bulbs">${bulbs}</div>
+        <div class="slot-jackpot">
+          <span class="slot-star">★</span>
+          <span class="slot-seven">7</span>
+          <span class="slot-seven">7</span>
+          <span class="slot-seven">7</span>
+          <span class="slot-star">★</span>
         </div>
-        <div class="slot-side">
-          <div class="slot-lever" id="slot-lever" aria-hidden="true">
-            <span class="slot-lever-knob"></span>
-            <span class="slot-lever-arm"></span>
+        <p class="slot-jackpot-sub">LUCKY LOTTO 6/45</p>
+      </div>
+      <div class="slot-chrome-frame">
+        <div class="slot-chrome-bulbs slot-chrome-bulbs--top">${bulbs}</div>
+        <div class="slot-body">
+          <div class="slot-window">
+            <div class="slot-window-shine" aria-hidden="true"></div>
+            <div class="slot-reels" id="slot-reels"></div>
+            <div class="slot-payline" aria-hidden="true"></div>
+          </div>
+          <div class="slot-side">
+            <div class="slot-lever" id="slot-lever" aria-hidden="true">
+              <span class="slot-lever-knob"></span>
+              <span class="slot-lever-arm"></span>
+              <span class="slot-lever-base"></span>
+            </div>
           </div>
         </div>
+        <div class="slot-chrome-bulbs slot-chrome-bulbs--bottom">${bulbs}</div>
       </div>
-      <div class="slot-base">
-        <span class="slot-base-light"></span>
-        <span class="slot-base-light"></span>
-        <span class="slot-base-light"></span>
+      <div class="slot-coin-tray" aria-hidden="true">
+        <span class="slot-coin"></span>
+        <span class="slot-coin"></span>
+        <span class="slot-coin"></span>
+        <span class="slot-coin"></span>
+        <span class="slot-coin"></span>
       </div>
+      <div class="slot-plinth"></div>
     </div>
     <p class="slot-status" id="slot-status">추첨을 시작하세요</p>
+    <section id="slot-result" class="slot-result" hidden aria-label="추첨 번호 결과">
+      <div class="slot-result-head">
+        <span class="slot-result-badge">WINNER</span>
+        <h3 class="slot-result-title">추첨 번호</h3>
+      </div>
+      <div id="slot-result-balls" class="slot-result-balls"></div>
+    </section>
   `;
 
   const reelsContainer = document.getElementById('slot-reels');
@@ -95,6 +118,30 @@ function buildSlotMachine() {
 
     slotReels.push({ reel, strip });
   }
+}
+
+function hideSlotResult() {
+  const panel = document.getElementById('slot-result');
+  if (panel) {
+    panel.hidden = true;
+    panel.classList.remove('visible');
+  }
+}
+
+function showSlotResult(numbers) {
+  const panel = document.getElementById('slot-result');
+  const ballsEl = document.getElementById('slot-result-balls');
+  if (!panel || !ballsEl) return;
+
+  ballsEl.innerHTML = '';
+  numbers.forEach((num, i) => {
+    const ball = createBall(num, false, 'slot-result-ball');
+    ball.style.animationDelay = `${i * 0.1}s`;
+    ballsEl.appendChild(ball);
+  });
+
+  panel.hidden = false;
+  requestAnimationFrame(() => panel.classList.add('visible'));
 }
 
 function createReelItem(num) {
@@ -170,6 +217,7 @@ function spinReel(strip, finalNum, durationMs) {
 
 async function animateDraw(numbers) {
   buildSlotMachine();
+  hideSlotResult();
   setSlotState('drawing');
 
   await sleep(300);
@@ -185,6 +233,7 @@ async function animateDraw(numbers) {
   }
 
   setSlotState('complete');
+  showSlotResult(numbers);
   await sleep(400);
 }
 
