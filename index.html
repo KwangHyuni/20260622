@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로또 추첨기 · 역대 당첨 조회</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="utility-strip">
+    <span>로또 6/45 · 번호 추첨 · 역대 당첨 조회</span>
+    <a href="https://www.dhlottery.co.kr" target="_blank" rel="noopener">동행복권 바로가기</a>
+  </div>
+
+  <header class="nav-bar-top">
+    <div class="nav-brand">Lotto</div>
+    <p class="nav-tagline">번호 추첨 · 역대 1등 당첨 조회</p>
+  </header>
+
+  <main class="page">
+    <section class="hero-band">
+      <div class="chevron-decoration chevron-left" aria-hidden="true"></div>
+      <div class="hero-promo-card">
+        <div class="hero-copy">
+          <span class="eyebrow">Lotto 6/45</span>
+          <h1>로또 추첨기</h1>
+          <p class="hero-lead">1~45 번호 중 6개를 무작위로 추첨하고, 1회부터 최신 회차까지 1등 당첨 내역을 조회할 수 있습니다.</p>
+        </div>
+      </div>
+      <div class="chevron-decoration chevron-right" aria-hidden="true"></div>
+    </section>
+
+    <div class="content-wrap">
+      <nav class="tabs" role="tablist" aria-label="기능 선택">
+        <button type="button" class="tab active" data-tab="draw" role="tab" aria-selected="true">번호 추첨</button>
+        <button type="button" class="tab" data-tab="history" role="tab" aria-selected="false">역대 1등 조회</button>
+      </nav>
+
+      <section id="draw-panel" class="panel">
+        <section class="controls card-section">
+          <div class="control-group">
+            <label for="ticket-count">추첨 장수</label>
+            <div class="stepper">
+              <button type="button" id="decrease" class="stepper-btn" aria-label="장수 줄이기">−</button>
+              <input type="number" id="ticket-count" value="1" min="1" max="10" readonly>
+              <button type="button" id="increase" class="stepper-btn" aria-label="장수 늘리기">+</button>
+            </div>
+          </div>
+          <button type="button" id="draw-btn" class="btn-primary draw-btn">
+            <span class="btn-text">추첨하기</span>
+          </button>
+        </section>
+
+        <section class="machine card-product" aria-live="polite">
+          <h2 class="section-title">추첨 결과</h2>
+          <div class="machine-window">
+            <div id="balls-display" class="sphere-stage"></div>
+            <section id="draw-balls-board" class="draw-balls-board" hidden aria-label="추첨공 결과">
+              <h3 class="draw-balls-title">추첨공</h3>
+              <div id="draw-balls-row" class="draw-balls-row"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="results" class="results card-section" hidden>
+          <h2 class="section-title">다중 추첨 결과</h2>
+          <div id="tickets-list" class="tickets-list"></div>
+        </section>
+      </section>
+
+      <section id="history-panel" class="panel cloud-band" hidden>
+        <div class="history-search card-section">
+          <label for="round-input">회차 조회</label>
+          <div class="search-row">
+            <input type="number" id="round-input" class="text-input" min="1" placeholder="예: 1229">
+            <button type="button" id="search-btn" class="btn-outline search-btn">조회</button>
+          </div>
+        </div>
+
+        <div id="history-loading" class="history-loading" hidden>당첨 데이터 불러오는 중…</div>
+        <div id="history-error" class="history-error" hidden></div>
+
+        <article id="history-detail" class="history-detail card-product" hidden></article>
+
+        <section class="history-recent card-section">
+          <h2 class="section-title">최근 1등 당첨 내역</h2>
+          <div id="history-list" class="history-list"></div>
+        </section>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer-dark">
+    <p>※ 번호 추첨은 오락용입니다. 당첨 데이터는 참고용이며, 정확한 정보는 <a href="https://www.dhlottery.co.kr" target="_blank" rel="noopener">동행복권</a>에서 확인하세요.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
