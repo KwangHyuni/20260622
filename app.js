@@ -1,6 +1,6 @@
 const MAX = 45;
 const COUNT = 6;
-const REEL_ITEM_HEIGHT = 58;
+const REEL_ITEM_HEIGHT = 64;
 const REEL_SPIN_ITEMS = 28;
 
 const ticketCountInput = document.getElementById('ticket-count');
@@ -121,7 +121,7 @@ function buildSlotMachine() {
     const face = document.createElement('div');
     face.className = 'slot-reel-face';
     face.dataset.index = String(i);
-    face.textContent = '?';
+    face.innerHTML = '<span class="slot-reel-placeholder">?</span>';
 
     reel.appendChild(strip);
     reel.appendChild(face);
@@ -194,30 +194,38 @@ function createReelItem(num) {
 }
 
 function resetReelFaces() {
-  slotReels.forEach(({ face, reel }) => {
+  slotReels.forEach(({ face, reel, strip }) => {
+    if (reel) reel.classList.remove('stopped', 'winner', 'spinning', 'has-result');
+    if (strip) {
+      strip.style.transform = '';
+      strip.innerHTML = '';
+      strip.appendChild(createReelItem('?'));
+    }
     if (face) {
       face.className = 'slot-reel-face';
-      face.textContent = '?';
+      face.innerHTML = '<span class="slot-reel-placeholder">?</span>';
     }
-    if (reel) reel.classList.remove('stopped', 'winner', 'spinning');
   });
 }
 
 function setReelFacesSpinning() {
-  slotReels.forEach(({ face }) => {
+  slotReels.forEach(({ face, reel }) => {
+    if (reel) reel.classList.remove('has-result');
     if (face) {
       face.className = 'slot-reel-face slot-reel-face--spinning';
-      face.textContent = '';
+      face.innerHTML = '';
     }
   });
 }
 
 function revealReelFace(num, index) {
-  const { face } = slotReels[index] ?? {};
-  if (!face) return;
+  const { face, reel } = slotReels[index] ?? {};
+  if (!face || !reel) return;
 
-  face.className = `slot-reel-face slot-reel-face--show slot-reel-face--${getBallColor(num)}`;
-  face.textContent = String(num);
+  reel.classList.add('has-result');
+  face.className = 'slot-reel-face slot-reel-face--show';
+  face.innerHTML = '';
+  face.appendChild(createBall(num, false, 'slot-reel-ball'));
 }
 
 function buildReelStrip(finalNum) {
@@ -252,16 +260,23 @@ function easeOutCubic(t) {
   return 1 - (1 - t) ** 3;
 }
 
+function getReelItemHeight() {
+  const reel = slotReels[0]?.reel;
+  if (!reel) return REEL_ITEM_HEIGHT;
+  return reel.getBoundingClientRect().height || REEL_ITEM_HEIGHT;
+}
+
 function prepareReelSpin(strip, finalNum) {
   strip.innerHTML = '';
   const numbers = buildReelStrip(finalNum);
   numbers.forEach((n) => strip.appendChild(createReelItem(n)));
   strip.style.transform = 'translate3d(0, 0, 0)';
-  return (numbers.length - 1) * REEL_ITEM_HEIGHT;
+  return (numbers.length - 1) * getReelItemHeight();
 }
 
 function spinReelToStop(strip, totalOffset, durationMs) {
-  const overshoot = REEL_ITEM_HEIGHT * 0.35;
+  const itemH = getReelItemHeight();
+  const overshoot = itemH * 0.35;
   const start = performance.now();
 
   return new Promise((resolve) => {

@@ -524,23 +524,27 @@ body {
 .slot-reels {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 5px;
+  gap: 0;
   position: relative;
   z-index: 2;
-  background: #f8f4e8;
-  padding: 4px;
-  border-radius: 6px;
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.15);
+  --reel-h: 64px;
+  padding: 5px;
+  background: linear-gradient(180deg, #1a0a0a 0%, #2a1515 100%);
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 2px #f5d060;
 }
 
 .slot-reel {
   position: relative;
-  height: 58px;
+  height: var(--reel-h, 64px);
   overflow: hidden;
-  background: linear-gradient(180deg, #fff 0%, #f0ebe0 50%, #fff 100%);
-  border-radius: 4px;
-  border: 2px solid #c9a000;
-  box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.12);
+  background: linear-gradient(180deg, #ffffff 0%, #f8f4ec 45%, #ebe4d6 100%);
+  border-right: 2px solid #d4af37;
+  box-shadow: inset 0 -4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.slot-reel:last-child {
+  border-right: none;
 }
 
 .slot-reel::before,
@@ -549,27 +553,34 @@ body {
   position: absolute;
   left: 0;
   right: 0;
-  height: 12px;
-  z-index: 3;
+  height: 10px;
+  z-index: 7;
   pointer-events: none;
 }
 
 .slot-reel::before {
   top: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, transparent 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0%, transparent 100%);
 }
 
 .slot-reel::after {
   bottom: 0;
-  background: linear-gradient(0deg, rgba(200, 190, 170, 0.9) 0%, transparent 100%);
+  background: linear-gradient(0deg, rgba(180, 170, 150, 0.5) 0%, transparent 100%);
+}
+
+.slot-reel.has-result .slot-reel-strip {
+  opacity: 0;
+  visibility: hidden;
 }
 
 .slot-reel-strip {
   will-change: transform;
+  position: relative;
+  z-index: 2;
 }
 
 .slot-reel-item {
-  height: 58px;
+  height: var(--reel-h, 64px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -607,67 +618,50 @@ body {
 .slot-reel-digit--gray   { background: linear-gradient(180deg, #cfd8dc, #7f8c8d 55%, #546e7a); }
 .slot-reel-digit--green  { background: linear-gradient(180deg, #69f0ae, #27ae60 55%, #1b7943); }
 
-/* 릴 고정 결과 숫자 */
+/* 릴 고정 결과 (흰 칸 중앙) */
 .slot-reel-face {
   position: absolute;
   inset: 0;
-  z-index: 6;
+  z-index: 5;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: #888;
-  background: rgba(248, 244, 232, 0.95);
-  border-radius: 2px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8f4ec 45%, #ebe4d6 100%);
   opacity: 1;
   pointer-events: none;
-  transition: opacity 0.15s ease;
+  transition: opacity 0.12s ease;
+}
+
+.slot-reel-placeholder {
+  font-size: 22px;
+  font-weight: 700;
+  color: #c8c0b0;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .slot-reel-face--spinning {
   opacity: 0;
+  z-index: 1;
 }
 
 .slot-reel-face--show {
   opacity: 1;
-  color: #fff;
-  animation: slotReelFacePop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  z-index: 8;
+  animation: slotReelFacePop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-.slot-reel-face--yellow {
-  background: linear-gradient(180deg, #fff59d, #f5c518 50%, #b8860b);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35);
+.slot-reel-ball {
+  width: 48px !important;
+  height: 48px !important;
+  animation: none !important;
 }
 
-.slot-reel-face--blue {
-  background: linear-gradient(180deg, #90caf9, #4a90d9 50%, #1565c0);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35);
-}
-
-.slot-reel-face--red {
-  background: linear-gradient(180deg, #ff8a80, #e74c3c 50%, #b71c1c);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35);
-}
-
-.slot-reel-face--gray {
-  background: linear-gradient(180deg, #cfd8dc, #7f8c8d 50%, #546e7a);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35);
-}
-
-.slot-reel-face--green {
-  background: linear-gradient(180deg, #69f0ae, #27ae60 50%, #1b7943);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35);
+.slot-reel-ball .ball-number {
+  font-size: 18px !important;
 }
 
 @keyframes slotReelFacePop {
-  from { opacity: 0; transform: scale(0.5); }
+  from { opacity: 0; transform: scale(0.35); }
   to { opacity: 1; transform: scale(1); }
 }
 
@@ -703,11 +697,11 @@ body {
 
 .slot-payline {
   position: absolute;
-  left: 14px;
-  right: 14px;
+  left: 10px;
+  right: 10px;
   top: 50%;
-  height: 58px;
-  margin-top: -29px;
+  height: var(--reel-h, 64px);
+  margin-top: calc(var(--reel-h, 64px) / -2);
   border-top: 3px solid rgba(220, 20, 20, 0.75);
   border-bottom: 3px solid rgba(220, 20, 20, 0.75);
   box-shadow: 0 0 12px rgba(255, 50, 50, 0.35);
@@ -1545,16 +1539,9 @@ body {
   }
 
   .slot-reels {
+    --reel-h: 54px;
     gap: 3px;
     padding: 3px;
-  }
-
-  .slot-reel {
-    height: 50px;
-  }
-
-  .slot-reel-item {
-    height: 50px;
   }
 
   .slot-reel-digit {
@@ -1563,13 +1550,26 @@ body {
     font-size: 15px;
   }
 
-  .slot-reel-face {
-    font-size: 17px;
+  .slot-reel-ball {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .slot-reel-ball .ball-number {
+    font-size: 15px !important;
+  }
+
+  .slot-reel-placeholder {
+    font-size: 18px;
   }
 
   .slot-payline {
-    height: 50px;
-    margin-top: -25px;
+    height: var(--reel-h, 54px);
+    margin-top: calc(var(--reel-h, 54px) / -2);
+  }
+
+  .slot-reel-face {
+    font-size: 18px;
   }
 
   .slot-ball {
