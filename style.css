@@ -455,24 +455,11 @@ body {
   inset: 0;
   transform-style: preserve-3d;
   transform: rotateX(-6deg);
+  will-change: transform;
 }
 
-.sphere-tumbler.spinning {
-  animation: sphereTumble 1.4s linear infinite;
-}
-
-.sphere-tumbler.slowing {
-  animation: sphereTumbleSlow 0.8s ease-out forwards;
-}
-
-@keyframes sphereTumble {
-  0% { transform: rotateX(-6deg) rotateY(0deg) rotateZ(0deg); }
-  100% { transform: rotateX(-6deg) rotateY(360deg) rotateZ(360deg); }
-}
-
-@keyframes sphereTumbleSlow {
-  from { transform: rotateX(-6deg) rotateY(0deg); }
-  to { transform: rotateX(-6deg) rotateY(90deg); }
+.sphere-tumbler.physics-active .sphere-ball-wrap {
+  will-change: transform;
 }
 
 .sphere-ball--fly {
@@ -499,6 +486,7 @@ body {
   height: 34px;
   margin: -17px;
   transform-style: preserve-3d;
+  transition: none;
 }
 
 .sphere-ball--ghost .ball-surface {

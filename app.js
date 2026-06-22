@@ -52,19 +52,282 @@ function applySphereOrientation(wrap, pos) {
 }
 
 const SPHERE_BALL_COUNT = 22;
-const SPHERE_RADIUS = 88;
+const SPHERE_INNER_RADIUS = 72;
+const SPHERE_BALL_RADIUS = 17;
 
-function fibonacciSphere(index, total, radius) {
-  if (total <= 1) return { x: 0, y: 0, z: 0 };
-  const golden = Math.PI * (3 - Math.sqrt(5));
-  const y = 1 - (index / (total - 1)) * 2;
-  const r = Math.sqrt(Math.max(0, 1 - y * y));
-  const theta = golden * index;
-  return {
-    x: Math.cos(theta) * r * radius,
-    y: y * radius,
-    z: Math.sin(theta) * r * radius,
-  };
+let spherePhysics = null;
+
+class SpherePhysics {
+  constructor(container) {
+    this.container = container;
+    this.balls = [];
+    this.running = false;
+    this.rafId = null;
+    this.lastTime = 0;
+    this.time = 0;
+    this.intensity = 1;
+    this.ghost = false;
+    this.numberTick = 0;
+    this.restitution = 0.82;
+    this.damping = 0.998;
+  }
+
+  init(count, ghost = false) {
+    this.destroy(false);
+    this.ghost = ghost;
+    this.container.innerHTML = '';
+
+    for (let i = 0; i < count; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      const r = SPHERE_INNER_RADIUS * (0.25 + Math.random() * 0.65);
+      const x = r * Math.sin(phi) * Math.cos(theta);
+      const y = r * Math.sin(phi) * Math.sin(theta);
+      const z = r * Math.cos(phi);
+      const speed = ghost ? 0 : 40 + Math.random() * 80;
+
+      const wrap = document.createElement('div');
+      wrap.className = 'sphere-ball-wrap';
+      const num = ghost ? '?' : Math.floor(Math.random() * MAX) + 1;
+      const ballEl = createBall(num, false, `sphere-ball${ghost ? ' sphere-ball--ghost' : ''}`);
+
+      wrap.appendChild(ballEl);
+      this.container.appendChild(wrap);
+
+      this.balls.push({
+        x, y, z,
+        vx: (Math.random() - 0.5) * speed,
+        vy: (Math.random() - 0.5) * speed,
+        vz: (Math.random() - 0.5) * speed,
+        wrap,
+        ballEl,
+        num,
+      });
+    }
+
+    this.balls.forEach((b) => this.syncDOM(b));
+  }
+
+  setGhost(ghost) {
+    this.ghost = ghost;
+    this.balls.forEach((b) => {
+      b.ballEl.classList.toggle('sphere-ball--ghost', ghost);
+      if (ghost) this.setBallNumber(b, '?');
+    });
+  }
+
+  setBallNumber(ball, num) {
+    ball.num = num;
+    const color = typeof num === 'number' ? getBallColor(num) : 'gray';
+    ball.ballEl.className = `ball ball-3d ${color} sphere-ball${this.ghost ? ' sphere-ball--ghost' : ''}`;
+    ball.ballEl.setAttribute('aria-label', typeof num === 'number' ? `번호 ${num}` : '대기');
+
+    const surface = document.createElement('span');
+    surface.className = 'ball-surface';
+    surface.setAttribute('aria-hidden', 'true');
+    const highlight = document.createElement('span');
+    highlight.className = 'ball-highlight';
+    highlight.setAttribute('aria-hidden', 'true');
+    const number = document.createElement('span');
+    number.className = 'ball-number';
+    number.textContent = num;
+
+    ball.ballEl.innerHTML = '';
+    ball.ballEl.appendChild(surface);
+    ball.ballEl.appendChild(highlight);
+    ball.ballEl.appendChild(number);
+  }
+
+  randomizeNumbers() {
+    if (this.ghost) return;
+    this.balls.forEach((b) => this.setBallNumber(b, Math.floor(Math.random() * MAX) + 1));
+  }
+
+  setIntensity(value) {
+    this.intensity = value;
+  }
+
+  start() {
+    if (this.running) return;
+    this.running = true;
+    this.lastTime = performance.now();
+    this.loop();
+  }
+
+  stop() {
+    this.running = false;
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+    if (this.container) {
+      this.container.style.transform = 'rotateX(-6deg)';
+    }
+  }
+
+  slowDown(factor = 0.35) {
+    this.balls.forEach((b) => {
+      b.vx *= factor;
+      b.vy *= factor;
+      b.vz *= factor;
+    });
+    this.intensity *= factor;
+  }
+
+  loop() {
+    if (!this.running) return;
+
+    const now = performance.now();
+    const dt = Math.min((now - this.lastTime) / 1000, 0.032);
+    this.lastTime = now;
+    this.time += dt;
+
+    this.step(dt);
+    this.rafId = requestAnimationFrame(() => this.loop());
+  }
+
+  step(dt) {
+    const g = 420 * this.intensity;
+    const tumble = this.time * (2.8 + this.intensity * 1.5);
+    const gx = Math.sin(tumble) * g;
+    const gy = Math.cos(tumble * 0.73) * g * 0.85 - 60 * this.intensity;
+    const gz = Math.sin(tumble * 1.37) * g * 0.9;
+
+    this.numberTick += dt;
+    if (!this.ghost && this.intensity > 0.4 && this.numberTick > 0.09) {
+      this.numberTick = 0;
+      this.randomizeNumbers();
+    }
+
+    for (const b of this.balls) {
+      b.vx += gx * dt + (Math.random() - 0.5) * 18 * this.intensity;
+      b.vy += gy * dt + (Math.random() - 0.5) * 18 * this.intensity;
+      b.vz += gz * dt + (Math.random() - 0.5) * 18 * this.intensity;
+
+      b.vx *= this.damping;
+      b.vy *= this.damping;
+      b.vz *= this.damping;
+
+      const maxV = 280 * this.intensity;
+      const vLen = Math.hypot(b.vx, b.vy, b.vz);
+      if (vLen > maxV) {
+        const s = maxV / vLen;
+        b.vx *= s;
+        b.vy *= s;
+        b.vz *= s;
+      }
+
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+      b.z += b.vz * dt;
+
+      this.constrainSphere(b);
+    }
+
+    this.resolveBallCollisions();
+
+    for (const b of this.balls) {
+      this.syncDOM(b);
+    }
+
+    const wobbleX = Math.sin(this.time * 3.2) * 4 * this.intensity;
+    const wobbleY = this.time * (35 + this.intensity * 25);
+    const wobbleZ = Math.cos(this.time * 2.1) * 3 * this.intensity;
+    this.container.style.transform =
+      `rotateX(${-6 + wobbleX}deg) rotateY(${wobbleY}deg) rotateZ(${wobbleZ}deg)`;
+  }
+
+  constrainSphere(b) {
+    const dist = Math.hypot(b.x, b.y, b.z) || 0.001;
+    const maxDist = SPHERE_INNER_RADIUS;
+
+    if (dist > maxDist) {
+      const nx = b.x / dist;
+      const ny = b.y / dist;
+      const nz = b.z / dist;
+      b.x = nx * maxDist;
+      b.y = ny * maxDist;
+      b.z = nz * maxDist;
+
+      const dot = b.vx * nx + b.vy * ny + b.vz * nz;
+      if (dot > 0) {
+        b.vx -= (1 + this.restitution) * dot * nx;
+        b.vy -= (1 + this.restitution) * dot * ny;
+        b.vz -= (1 + this.restitution) * dot * nz;
+      }
+    }
+  }
+
+  resolveBallCollisions() {
+    const minDist = SPHERE_BALL_RADIUS * 2;
+    const minDistSq = minDist * minDist;
+
+    for (let i = 0; i < this.balls.length; i++) {
+      for (let j = i + 1; j < this.balls.length; j++) {
+        const a = this.balls[i];
+        const b = this.balls[j];
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const dz = b.z - a.z;
+        const distSq = dx * dx + dy * dy + dz * dz;
+
+        if (distSq >= minDistSq || distSq < 0.001) continue;
+
+        const dist = Math.sqrt(distSq);
+        const nx = dx / dist;
+        const ny = dy / dist;
+        const nz = dz / dist;
+        const overlap = (minDist - dist) * 0.5;
+
+        a.x -= nx * overlap;
+        a.y -= ny * overlap;
+        a.z -= nz * overlap;
+        b.x += nx * overlap;
+        b.y += ny * overlap;
+        b.z += nz * overlap;
+
+        const relVx = b.vx - a.vx;
+        const relVy = b.vy - a.vy;
+        const relVz = b.vz - a.vz;
+        const relDot = relVx * nx + relVy * ny + relVz * nz;
+
+        if (relDot > 0) continue;
+
+        const impulse = (-(1 + this.restitution) * relDot) / 2;
+        a.vx -= impulse * nx;
+        a.vy -= impulse * ny;
+        a.vz -= impulse * nz;
+        b.vx += impulse * nx;
+        b.vy += impulse * ny;
+        b.vz += impulse * nz;
+      }
+    }
+  }
+
+  syncDOM(b) {
+    applySphereOrientation(b.wrap, { x: b.x, y: b.y, z: b.z });
+    const spin = Math.hypot(b.vx, b.vy, b.vz);
+    if (spin > 30) {
+      b.ballEl.classList.add('rolling');
+    } else {
+      b.ballEl.classList.remove('rolling');
+    }
+  }
+
+  destroy(clearContainer = true) {
+    this.stop();
+    this.balls = [];
+    if (clearContainer && this.container) {
+      this.container.innerHTML = '';
+    }
+  }
+}
+
+async function tumblePhysics(durationMs, intensity = 1) {
+  if (!spherePhysics) return;
+  spherePhysics.setIntensity(intensity);
+  spherePhysics.start();
+  await sleep(durationMs);
 }
 
 function buildSphereMachine() {
@@ -106,52 +369,20 @@ function buildSphereMachine() {
 }
 
 function fillTumblerGhost() {
-  const tumbler = document.getElementById('sphere-tumbler');
-  if (!tumbler) return;
-
-  tumbler.innerHTML = '';
-  for (let i = 0; i < SPHERE_BALL_COUNT; i++) {
-    const pos = fibonacciSphere(i, SPHERE_BALL_COUNT, SPHERE_RADIUS);
-    const wrap = document.createElement('div');
-    wrap.className = 'sphere-ball-wrap';
-    wrap.style.setProperty('--bx', `${pos.x}px`);
-    wrap.style.setProperty('--by', `${pos.y}px`);
-    wrap.style.setProperty('--bz', `${pos.z}px`);
-    applySphereOrientation(wrap, pos);
-
-    const ball = document.createElement('div');
-    ball.className = 'ball ball-3d gray sphere-ball sphere-ball--ghost';
-    const surface = document.createElement('span');
-    surface.className = 'ball-surface';
-    const highlight = document.createElement('span');
-    highlight.className = 'ball-highlight';
-    const number = document.createElement('span');
-    number.className = 'ball-number';
-    number.textContent = '?';
-    ball.appendChild(surface);
-    ball.appendChild(highlight);
-    ball.appendChild(number);
-    wrap.appendChild(ball);
-    tumbler.appendChild(wrap);
-  }
+  if (!spherePhysics) return;
+  spherePhysics.init(SPHERE_BALL_COUNT, true);
 }
 
-function updateTumblerBalls(getNumber) {
-  const tumbler = document.getElementById('sphere-tumbler');
-  if (!tumbler) return;
-
-  tumbler.innerHTML = '';
-  for (let i = 0; i < SPHERE_BALL_COUNT; i++) {
-    const pos = fibonacciSphere(i, SPHERE_BALL_COUNT, SPHERE_RADIUS);
-    const wrap = document.createElement('div');
-    wrap.className = 'sphere-ball-wrap';
-    wrap.style.setProperty('--bx', `${pos.x}px`);
-    wrap.style.setProperty('--by', `${pos.y}px`);
-    wrap.style.setProperty('--bz', `${pos.z}px`);
-    applySphereOrientation(wrap, pos);
-    wrap.appendChild(createBall(getNumber(), true, 'sphere-ball'));
-    tumbler.appendChild(wrap);
-  }
+function startPhysicsDraw() {
+  if (!spherePhysics) return;
+  spherePhysics.setGhost(false);
+  spherePhysics.balls.forEach((b) => {
+    const speed = 120 + Math.random() * 160;
+    b.vx = (Math.random() - 0.5) * speed;
+    b.vy = (Math.random() - 0.5) * speed;
+    b.vz = (Math.random() - 0.5) * speed;
+    spherePhysics.setBallNumber(b, Math.floor(Math.random() * MAX) + 1);
+  });
 }
 
 function setSphereState(state) {
@@ -164,8 +395,7 @@ function setSphereState(state) {
   const status = document.getElementById('sphere-status');
 
   if (tumbler) {
-    tumbler.classList.toggle('spinning', state === 'drawing');
-    tumbler.classList.toggle('slowing', state === 'ejecting');
+    tumbler.classList.toggle('physics-active', state === 'drawing' || state === 'ejecting');
   }
   if (globe) globe.classList.toggle('rumble', state === 'drawing');
 
@@ -234,7 +464,9 @@ function renderDrawBalls(numbers, { animateIndex = -1 } = {}) {
 }
 
 function renderPlaceholder() {
+  if (spherePhysics) spherePhysics.destroy();
   buildSphereMachine();
+  spherePhysics = new SpherePhysics(document.getElementById('sphere-tumbler'));
   fillTumblerGhost();
   initDrawBallsRow();
   showDrawBallsBoard(true);
@@ -250,8 +482,11 @@ function renderPlaceholder() {
 async function ejectBall(num) {
   setSphereState('ejecting');
 
-  const tumbler = document.getElementById('sphere-tumbler');
-  if (tumbler) tumbler.classList.remove('spinning');
+  if (spherePhysics) {
+    spherePhysics.slowDown(0.25);
+    await sleep(120);
+    spherePhysics.stop();
+  }
 
   const flyer = document.getElementById('sphere-flyer');
   const exit = document.getElementById('sphere-exit');
@@ -334,33 +569,28 @@ async function animateDraw(numbers) {
   renderPlaceholder();
   showDrawBallsBoard(true);
   setSphereState('drawing');
-  updateTumblerBalls(() => Math.floor(Math.random() * MAX) + 1);
+  startPhysicsDraw();
+  spherePhysics.start();
 
   await sleep(500);
 
-  const revealed = [];
-
   for (let i = 0; i < COUNT; i++) {
-    const tumbler = document.getElementById('sphere-tumbler');
-    if (tumbler) tumbler.classList.add('spinning');
-
-    const spinFrames = 22 + i * 6;
-    for (let f = 0; f < spinFrames; f++) {
-      updateTumblerBalls(() => Math.floor(Math.random() * MAX) + 1);
-      await sleep(38 + f * 2);
-    }
+    const intensity = 1 + i * 0.18;
+    const tumbleMs = 2000 + i * 450;
+    await tumblePhysics(tumbleMs, intensity);
 
     await ejectBall(numbers[i]);
-    revealed.push(numbers[i]);
     setDrawBallSlot(i, numbers[i], true);
 
     if (i < COUNT - 1) {
       setSphereState('drawing');
-      updateTumblerBalls(() => Math.floor(Math.random() * MAX) + 1);
+      startPhysicsDraw();
+      spherePhysics.start();
       await sleep(200);
     }
   }
 
+  if (spherePhysics) spherePhysics.stop();
   setSphereState('complete');
   renderDrawBalls(numbers);
   await sleep(300);
