@@ -149,6 +149,8 @@ class SpherePhysics {
         wrap,
         ballEl,
         num,
+        merge: ghost ? 0.55 : 1,
+        mergePulse: 0,
       });
     }
 
@@ -203,6 +205,7 @@ class SpherePhysics {
       b.vx *= factor;
       b.vy *= factor;
       b.vz *= factor;
+      b.mergePulse = Math.max(b.mergePulse, 0.7);
     });
     this.intensity *= factor;
   }
@@ -260,6 +263,7 @@ class SpherePhysics {
     this.resolveBallCollisions();
 
     for (const b of this.balls) {
+      this.updateMergeState(b, dt);
       this.syncDOM(b);
     }
 
@@ -333,20 +337,44 @@ class SpherePhysics {
         b.vx += impulse * nx;
         b.vy += impulse * ny;
         b.vz += impulse * nz;
+
+        if (Math.abs(relDot) < 95) {
+          a.mergePulse = Math.min(1, a.mergePulse + 0.45);
+          b.mergePulse = Math.min(1, b.mergePulse + 0.45);
+        }
       }
     }
   }
 
+  updateMergeState(b, dt) {
+    const spin = Math.hypot(b.vx, b.vy, b.vz);
+    let target = Math.min(spin / 65, 1) * this.intensity;
+
+    if (b.mergePulse > 0) {
+      target = Math.max(0, target - b.mergePulse * 0.65);
+      b.mergePulse = Math.max(0, b.mergePulse - dt * 1.8);
+    }
+
+    b.merge += (target - b.merge) * Math.min(1, dt * 14);
+    b.merge = Math.max(0, Math.min(1, b.merge));
+  }
+
   syncDOM(b) {
     applySphereOrientation(b.wrap, { x: b.x, y: b.y, z: b.z });
+
     const spin = Math.hypot(b.vx, b.vy, b.vz);
-    const scatter = Math.min(spin / 90, 1) * this.intensity * 0.9;
-    b.ballEl.style.setProperty('--scatter', scatter.toFixed(3));
-    b.ballEl.classList.toggle('ball--scattering', scatter > 0.2);
+    const merge = b.merge ?? 0;
+
+    b.ballEl.style.setProperty('--merge', merge.toFixed(3));
+    b.ballEl.style.setProperty('--scatter', merge.toFixed(3));
+    b.ballEl.classList.toggle('ball--scattering', merge > 0.35);
+    b.ballEl.classList.toggle('ball--merging', merge > 0.12 && merge < 0.72);
+    b.ballEl.classList.toggle('ball--merged', merge < 0.12);
 
     const frags = b.ballEl.querySelector('.ball-fragments');
     if (frags) {
-      frags.style.setProperty('--frag-rot', `${this.time * (120 + spin * 0.4)}deg`);
+      frags.style.setProperty('--frag-rot', `${this.time * (80 + spin * 0.25)}deg`);
+      frags.style.setProperty('--frag-scale', (1 - merge * 0.08).toFixed(3));
     }
 
     if (spin > 30) {
@@ -433,6 +461,8 @@ function startPhysicsDraw() {
     b.vx = (Math.random() - 0.5) * speed;
     b.vy = (Math.random() - 0.5) * speed;
     b.vz = (Math.random() - 0.5) * speed;
+    b.merge = 1;
+    b.mergePulse = 0;
     spherePhysics.setBallNumber(b, Math.floor(Math.random() * MAX) + 1);
   });
 }
@@ -454,18 +484,30 @@ function setSphereState(state) {
   if (status) {
     const labels = {
       idle: '추첨을 시작하세요',
-      drawing: '구 안에서 공이 굴러가는 중…',
-      ejecting: '추첨공 추출 중!',
-      complete: '추첨 완료!',
+      drawing: '파편이 흩어지며 섞이는 중…',
+      ejecting: '파편 합체 · 추첨공 추출!',
+      complete: '합체 완료!',
     };
     status.textContent = labels[state] ?? labels.idle;
   }
 }
 
 function createDrawBall(num, animate = false) {
-  const ball = createBall(num, false, 'draw-ball');
-  if (animate) ball.classList.add('draw-ball--enter');
+  const ball = createBall(num, false, 'draw-ball', { fragmented: true });
+  ball.style.setProperty('--merge', '1');
+  if (animate) ball.classList.add('draw-ball--merge-in');
   return ball;
+}
+
+async function mergeBallToSolid(ballEl, num) {
+  const extraClass = ballEl.classList.contains('draw-ball') ? 'draw-ball' : 'sphere-ball';
+  ballEl.classList.add('ball--merge-to-solid');
+  ballEl.style.setProperty('--merge', '0');
+  ballEl.style.setProperty('--scatter', '0');
+  await sleep(420);
+  const color = getBallColor(num);
+  ballEl.className = `ball ball-3d ${color} ${extraClass}`;
+  buildBallContent(ballEl, num, { fragmented: false });
 }
 
 function initDrawBallsRow() {
@@ -489,7 +531,7 @@ function initDrawBallsRow() {
   }
 }
 
-function setDrawBallSlot(index, num, animate = true) {
+async function setDrawBallSlot(index, num, animate = true) {
   const slot = drawBallsRow?.querySelector(`.draw-ball-slot[data-index="${index}"]`);
   if (!slot) return;
 
@@ -497,9 +539,15 @@ function setDrawBallSlot(index, num, animate = true) {
   if (!pedestal) return;
 
   pedestal.innerHTML = '';
-  pedestal.appendChild(createDrawBall(num, animate));
+  const ball = createDrawBall(num, animate);
+  pedestal.appendChild(ball);
   slot.classList.add('filled');
   slot.classList.toggle('just-drawn', animate);
+
+  if (animate) {
+    await sleep(520);
+    await mergeBallToSolid(ball, num);
+  }
 }
 
 function showDrawBallsBoard(show) {
@@ -554,6 +602,7 @@ async function ejectBall(num) {
   if (flyer) {
     flyer.innerHTML = '';
     const flyBall = createBall(num, false, 'sphere-ball sphere-ball--fly ball--reassemble', { fragmented: true });
+    flyBall.style.setProperty('--merge', '1');
     flyBall.style.setProperty('--scatter', '1');
     flyer.appendChild(flyBall);
     flyer.classList.remove('active');
@@ -566,11 +615,14 @@ async function ejectBall(num) {
   if (flyer) flyer.classList.remove('active');
   if (exit) {
     exit.innerHTML = '';
-    const ball = createBall(num, false, 'sphere-ball');
+    const ball = createBall(num, false, 'sphere-ball ball--fragmented ball--merge-to-solid', { fragmented: true });
+    ball.style.setProperty('--merge', '1');
     exit.appendChild(ball);
     exit.classList.remove('pop');
     void exit.offsetWidth;
     exit.classList.add('pop');
+    requestAnimationFrame(() => ball.style.setProperty('--merge', '0'));
+    setTimeout(() => mergeBallToSolid(ball, num), 450);
   }
 
   await sleep(280);
@@ -613,7 +665,7 @@ function renderResults(tickets) {
 
     const balls = document.createElement('div');
     balls.className = 'ticket-balls';
-    numbers.forEach((num) => balls.appendChild(createDrawBall(num)));
+    numbers.forEach((num) => balls.appendChild(createBall(num, false, 'draw-ball')));
 
     ticket.appendChild(label);
     ticket.appendChild(balls);
@@ -642,7 +694,7 @@ async function animateDraw(numbers) {
     await tumblePhysics(tumbleMs, intensity);
 
     await ejectBall(numbers[i]);
-    setDrawBallSlot(i, numbers[i], true);
+    await setDrawBallSlot(i, numbers[i], true);
 
     if (i < COUNT - 1) {
       setSphereState('drawing');

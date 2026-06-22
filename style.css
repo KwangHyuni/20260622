@@ -794,8 +794,9 @@ body {
   font-size: 17px !important;
 }
 
-.draw-ball--enter {
-  animation: drawBallEnter 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+.draw-ball--enter,
+.draw-ball--merge-in {
+  animation: drawMergeIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 @keyframes drawBallEnter {
@@ -947,8 +948,8 @@ body {
   position: absolute;
   inset: 0;
   transform-style: preserve-3d;
-  transform: rotateY(var(--frag-rot, 0deg));
-  transition: transform 0.08s linear;
+  transform: rotateY(var(--frag-rot, 0deg)) scale(var(--frag-scale, 1));
+  transition: transform 0.1s linear;
 }
 
 .ball-fragment {
@@ -962,15 +963,16 @@ body {
   transform-style: preserve-3d;
   transform:
     translate3d(
-      calc(var(--fx) * (12px + var(--scatter, 0) * 14px)),
-      calc(var(--fy) * (12px + var(--scatter, 0) * 14px)),
-      calc(var(--fz) * (12px + var(--scatter, 0) * 14px))
+      calc(var(--fx) * (6px + var(--merge, var(--scatter, 0)) * 20px)),
+      calc(var(--fy) * (6px + var(--merge, var(--scatter, 0)) * 20px)),
+      calc(var(--fz) * (6px + var(--merge, var(--scatter, 0)) * 20px))
     )
     rotateX(calc(var(--fy) * 90deg))
     rotateY(calc(var(--fx) * 90deg));
   box-shadow:
     inset -1px -2px 3px rgba(0, 0, 0, 0.25),
     inset 1px 1px 2px rgba(255, 255, 255, 0.35);
+  transition: transform 0.12s ease-out, opacity 0.12s ease;
   animation: fragmentShimmer 1.8s ease-in-out infinite;
   animation-delay: calc(var(--fi, 0) * 0.06s);
 }
@@ -983,6 +985,62 @@ body {
 
 .ball--scattering .ball-fragment {
   animation: fragmentShimmer 0.35s ease-in-out infinite alternate, fragmentPulse 0.2s linear infinite;
+}
+
+.ball--merging .ball-fragments {
+  animation: mergePulseRing 0.55s ease-in-out infinite;
+}
+
+.ball--merging .ball-number {
+  animation: mergeNumberGlow 0.55s ease-in-out infinite;
+}
+
+.ball--merged::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.55) 0%, transparent 40%);
+  box-shadow: inset -4px -6px 12px rgba(0, 0, 0, 0.2);
+  opacity: calc(1 - var(--merge, 0) * 4);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.ball--merged .ball-fragment {
+  opacity: calc(0.75 + (1 - var(--merge, 0)) * 0.25);
+}
+
+@keyframes mergePulseRing {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.2); }
+}
+
+@keyframes mergeNumberGlow {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+.ball--merge-to-solid {
+  transition: --merge 0.45s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+@keyframes drawMergeIn {
+  0% {
+    --merge: 1;
+    transform: scale(0.4);
+    opacity: 0.5;
+  }
+  60% {
+    --merge: 0.35;
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    --merge: 0.15;
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .ball--fragmented .ball-number {
