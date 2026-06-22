@@ -117,10 +117,17 @@ function buildSlotMachine() {
     const strip = document.createElement('div');
     strip.className = 'slot-reel-strip';
     strip.appendChild(createReelItem('?'));
+
+    const face = document.createElement('div');
+    face.className = 'slot-reel-face';
+    face.dataset.index = String(i);
+    face.textContent = '?';
+
     reel.appendChild(strip);
+    reel.appendChild(face);
     reelsContainer.appendChild(reel);
 
-    slotReels.push({ reel, strip });
+    slotReels.push({ reel, strip, face });
   }
 
   initCabinetDigits();
@@ -164,16 +171,53 @@ function hideSlotResult() {
     panel.classList.remove('visible');
   }
   resetCabinetDigits();
+  resetReelFaces();
 }
 
 function createReelItem(num) {
   const item = document.createElement('div');
   item.className = 'slot-reel-item';
-  const ball = typeof num === 'number'
-    ? createBall(num, false, 'slot-ball')
-    : createBall('?', false, 'slot-ball slot-ball--idle');
-  item.appendChild(ball);
+
+  if (typeof num === 'number') {
+    const digit = document.createElement('span');
+    digit.className = `slot-reel-digit slot-reel-digit--${getBallColor(num)}`;
+    digit.textContent = String(num);
+    item.appendChild(digit);
+  } else {
+    const digit = document.createElement('span');
+    digit.className = 'slot-reel-digit slot-reel-digit--idle';
+    digit.textContent = '?';
+    item.appendChild(digit);
+  }
+
   return item;
+}
+
+function resetReelFaces() {
+  slotReels.forEach(({ face, reel }) => {
+    if (face) {
+      face.className = 'slot-reel-face';
+      face.textContent = '?';
+    }
+    if (reel) reel.classList.remove('stopped', 'winner', 'spinning');
+  });
+}
+
+function setReelFacesSpinning() {
+  slotReels.forEach(({ face }) => {
+    if (face) {
+      face.className = 'slot-reel-face slot-reel-face--spinning';
+      face.textContent = '';
+    }
+  });
+}
+
+function revealReelFace(num, index) {
+  const { face } = slotReels[index] ?? {};
+  if (!face) return;
+
+  face.className = `slot-reel-face slot-reel-face--show slot-reel-face--${getBallColor(num)}`;
+  face.textContent = String(num);
 }
 
 function buildReelStrip(finalNum) {
@@ -267,6 +311,7 @@ async function animateDraw(numbers) {
   await sleep(300);
 
   const offsets = numbers.map((num, i) => prepareReelSpin(slotReels[i].strip, num));
+  setReelFacesSpinning();
   slotReels.forEach(({ reel }) => reel.classList.add('spinning'));
 
   const stopTasks = numbers.map((num, i) => {
@@ -276,6 +321,7 @@ async function animateDraw(numbers) {
     return spinReelToStop(strip, offsets[i], duration).then(async () => {
       reel.classList.remove('spinning');
       reel.classList.add('stopped', 'winner');
+      revealReelFace(numbers[i], i);
       revealSlotResultBall(numbers, i);
       await sleep(150);
     });
