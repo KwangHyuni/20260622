@@ -10,6 +10,12 @@ const drawBtn = document.getElementById('draw-btn');
 const slotMachineEl = document.getElementById('slot-machine');
 const resultsSection = document.getElementById('results');
 const ticketsList = document.getElementById('tickets-list');
+const saveStatusEl = document.getElementById('save-status');
+const savedDrawsLoading = document.getElementById('saved-draws-loading');
+const savedDrawsError = document.getElementById('saved-draws-error');
+const savedDrawsList = document.getElementById('saved-draws-list');
+
+const LOTTO_DRAWS_API = '/api/lotto-draws';
 
 function getBallColor(num) {
   if (num <= 10) return 'yellow';
@@ -392,11 +398,153 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function showSaveStatus(message, type = 'success') {
+  if (!saveStatusEl) return;
+  saveStatusEl.textContent = message;
+  saveStatusEl.className = `save-status save-status--${type}`;
+  saveStatusEl.hidden = false;
+}
+
+function hideSaveStatus() {
+  if (saveStatusEl) saveStatusEl.hidden = true;
+}
+
+function formatSavedTime(iso) {
+  const date = new Date(iso);
+  return date.toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function groupSavedDraws(draws) {
+  const batches = new Map();
+
+  draws.forEach((draw) => {
+    const key = draw.batch_id || String(draw.id);
+    if (!batches.has(key)) {
+      batches.set(key, {
+        batchId: key,
+        createdAt: draw.created_at,
+        tickets: [],
+      });
+    }
+    batches.get(key).tickets.push({
+      index: draw.ticket_index ?? 1,
+      numbers: draw.numbers,
+    });
+  });
+
+  return Array.from(batches.values()).map((batch) => {
+    batch.tickets.sort((a, b) => a.index - b.index);
+    return batch;
+  });
+}
+
+function renderSavedDraws(draws) {
+  if (!savedDrawsList) return;
+
+  if (!draws?.length) {
+    savedDrawsList.innerHTML = '<p class="saved-draws-empty">아직 저장된 추첨 기록이 없습니다. 추첨하기를 눌러 번호를 생성해 보세요.</p>';
+    return;
+  }
+
+  savedDrawsList.innerHTML = '';
+  const batches = groupSavedDraws(draws);
+
+  batches.forEach((batch, batchIndex) => {
+    const item = document.createElement('article');
+    item.className = 'saved-draw-item';
+    item.style.animationDelay = `${batchIndex * 0.05}s`;
+
+    const head = document.createElement('div');
+    head.className = 'saved-draw-head';
+    head.innerHTML = `
+      <time class="saved-draw-time">${formatSavedTime(batch.createdAt)}</time>
+      <span class="saved-draw-count">${batch.tickets.length}장</span>
+    `;
+
+    const ticketsWrap = document.createElement('div');
+    ticketsWrap.className = 'saved-draw-tickets';
+
+    batch.tickets.forEach((ticket) => {
+      const row = document.createElement('div');
+      row.className = 'saved-draw-ticket';
+
+      const label = document.createElement('span');
+      label.className = 'saved-draw-label';
+      label.textContent = `${ticket.index}장`;
+
+      const balls = document.createElement('div');
+      balls.className = 'saved-draw-balls';
+      ticket.numbers.forEach((num) => balls.appendChild(createBall(num, false, 'slot-ball')));
+
+      row.appendChild(label);
+      row.appendChild(balls);
+      ticketsWrap.appendChild(row);
+    });
+
+    item.appendChild(head);
+    item.appendChild(ticketsWrap);
+    savedDrawsList.appendChild(item);
+  });
+}
+
+async function loadSavedDraws() {
+  if (!savedDrawsList) return;
+
+  savedDrawsLoading.hidden = false;
+  savedDrawsError.hidden = true;
+
+  try {
+    const res = await fetch(LOTTO_DRAWS_API);
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data?.error || '저장된 기록을 불러오지 못했습니다.');
+    }
+
+    renderSavedDraws(data.draws ?? []);
+  } catch (err) {
+    savedDrawsError.textContent = err.message || '저장된 기록 로드에 실패했습니다.';
+    savedDrawsError.hidden = false;
+    savedDrawsList.innerHTML = '';
+  } finally {
+    savedDrawsLoading.hidden = true;
+  }
+}
+
+async function saveDrawsToSupabase(tickets) {
+  hideSaveStatus();
+
+  try {
+    const res = await fetch(LOTTO_DRAWS_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tickets }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data?.error || '추첨 번호 저장에 실패했습니다.');
+    }
+
+    showSaveStatus(`${tickets.length}장의 번호가 Supabase에 저장되었습니다.`, 'success');
+    await loadSavedDraws();
+  } catch (err) {
+    showSaveStatus(err.message || '추첨 번호 저장에 실패했습니다.', 'error');
+  }
+}
+
 async function draw() {
   const count = parseInt(ticketCountInput.value, 10);
   drawBtn.disabled = true;
   drawBtn.classList.add('spinning');
   resultsSection.hidden = true;
+  hideSaveStatus();
 
   const tickets = generateTickets(count);
   await animateDraw(tickets[0]);
@@ -407,6 +555,8 @@ async function draw() {
     ticketsList.innerHTML = '';
     resultsSection.hidden = true;
   }
+
+  await saveDrawsToSupabase(tickets);
 
   drawBtn.disabled = false;
   drawBtn.classList.remove('spinning');
@@ -423,6 +573,7 @@ drawBtn.addEventListener('click', draw);
 
 buildSlotMachine();
 setSlotState('idle');
+loadSavedDraws();
 
 const LOTTO_API = 'https://smok95.github.io/lotto/results/all.json';
 const drawPanel = document.getElementById('draw-panel');

@@ -66,6 +66,18 @@
           <h2 class="section-title">다중 추첨 결과</h2>
           <div id="tickets-list" class="tickets-list"></div>
         </section>
+
+        <section class="saved-draws card-section" aria-labelledby="saved-draws-title">
+          <div class="saved-draws-head">
+            <h2 id="saved-draws-title" class="section-title">저장된 추첨 기록</h2>
+            <span class="saved-draws-badge">Supabase</span>
+          </div>
+          <p class="saved-draws-lead">추첨한 번호는 Supabase에 자동 저장됩니다.</p>
+          <div id="save-status" class="save-status" hidden aria-live="polite"></div>
+          <div id="saved-draws-loading" class="history-loading" hidden>기록 불러오는 중…</div>
+          <div id="saved-draws-error" class="history-error" hidden></div>
+          <div id="saved-draws-list" class="saved-draws-list"></div>
+        </section>
       </section>
 
       <section id="chatbot-panel" class="panel" hidden>
