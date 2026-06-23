@@ -1,8 +1,29 @@
 const TABLE = 'lotto_draws';
 const DEFAULT_LIMIT = 50;
 
+function normalizeSupabaseUrl(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  // DB 연결 문자열 등 잘못된 값 방지
+  if (trimmed.startsWith('postgres://') || trimmed.startsWith('postgresql://')) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
+    // Dashboard에서 REST endpoint 전체를 붙여넣어도 origin만 사용
+    // 예: https://xxx.supabase.co/rest/v1 → https://xxx.supabase.co
+    return parsed.origin;
+  } catch {
+    return null;
+  }
+}
+
 function getSupabaseConfig() {
-  const url = process.env.SUPABASE_URL?.replace(/\/$/, '');
+  const url = normalizeSupabaseUrl(process.env.SUPABASE_URL);
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
   return { url, key };
 }
@@ -31,11 +52,15 @@ async function supabaseRequest(path, { method = 'GET', body, prefer } = {}) {
     apikey: key,
     Authorization: `Bearer ${key}`,
     'Content-Type': 'application/json',
+    Accept: 'application/json',
+    'Accept-Profile': 'public',
+    'Content-Profile': 'public',
   };
 
   if (prefer) headers.Prefer = prefer;
 
-  const res = await fetch(`${url}/rest/v1/${path}`, {
+  const requestUrl = `${url}/rest/v1/${path}`;
+  const res = await fetch(requestUrl, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
@@ -52,11 +77,25 @@ async function supabaseRequest(path, { method = 'GET', body, prefer } = {}) {
   }
 
   if (!res.ok) {
-    const message =
+    const code = data?.code;
+    const baseMessage =
       data?.message ||
       data?.error ||
       (typeof data === 'string' ? data : `Supabase 오류 (${res.status})`);
-    throw new Error(message);
+
+    if (code === 'PGRST125' || /invalid path/i.test(baseMessage)) {
+      throw new Error(
+        'Supabase URL 경로가 올바르지 않습니다. SUPABASE_URL은 https://프로젝트ID.supabase.co 형식만 사용하세요. (/rest/v1 붙이지 마세요.) supabase/schema.sql로 lotto_draws 테이블도 생성했는지 확인해 주세요.',
+      );
+    }
+
+    if (code === 'PGRST205' || /schema cache/i.test(baseMessage)) {
+      throw new Error(
+        'lotto_draws 테이블을 찾을 수 없습니다. Supabase SQL Editor에서 supabase/schema.sql을 실행해 주세요.',
+      );
+    }
+
+    throw new Error(baseMessage);
   }
 
   return data;
@@ -101,9 +140,13 @@ module.exports = async function handler(req, res) {
 
   const { url, key } = getSupabaseConfig();
   if (!url || !key) {
+    const rawUrl = process.env.SUPABASE_URL?.trim();
+    const urlHint = rawUrl?.startsWith('postgres')
+      ? ' SUPABASE_URL에 DB 연결 문자열이 아닌 Project URL(https://xxx.supabase.co)을 넣어 주세요.'
+      : ' SUPABASE_URL은 https://프로젝트ID.supabase.co 형식이어야 합니다.';
+
     return res.status(500).json({
-      error:
-        'Supabase가 설정되지 않았습니다. SUPABASE_URL과 SUPABASE_SERVICE_ROLE_KEY를 Vercel Environment Variables에 추가하고 supabase/schema.sql을 실행해 주세요.',
+      error: `Supabase가 설정되지 않았습니다.${urlHint} SUPABASE_SERVICE_ROLE_KEY도 Vercel Environment Variables에 추가하고 supabase/schema.sql을 실행해 주세요.`,
     });
   }
 
