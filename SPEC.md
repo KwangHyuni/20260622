@@ -2,10 +2,11 @@
 
 | 항목 | 내용 |
 |---|---|
-| **문서 버전** | 1.0 |
+| **문서 버전** | 1.1 |
 | **작성일** | 2026-06-23 |
 | **대상** | 로또 6/45 웹 추첨기 + Supabase 추첨 기록 저장 |
 | **배포** | Vercel (Serverless API + 정적 프론트) |
+| **작업 이력** | [WORK_HISTORY.md](./WORK_HISTORY.md) |
 
 ---
 
@@ -85,6 +86,8 @@ RLS 활성화. `select`·`insert` 정책: public 허용. 스키마 정의: `supa
 | `api/lotto-draws.js` | Supabase REST 연동, URL 정규화·에러 처리 |
 | `api/saju-chat.js` | Gemini API 연동 |
 | `supabase/schema.sql` | 테이블·인덱스·RLS 생성 SQL |
+| `WORK_HISTORY.md` | 작업 이력 (기능·버그·문서 변경 기록) |
+| `.cursor/rules/work-history.mdc` | 작업 완료 시 이력 자동 갱신 규칙 |
 
 ## 8. 설정·실행
 
@@ -101,6 +104,11 @@ RLS 활성화. `select`·`insert` 정책: public 허용. 스키마 정의: `supa
 | `lotto_draws 테이블을 찾을 수 없습니다` | 스키마 미적용 | `schema.sql` 실행 |
 | Supabase 미설정 | 환경 변수 누락 | Vercel Settings → Environment Variables |
 | API 호출 실패 (로컬) | 정적 파일만 열음 | `vercel dev`로 API 서버 함께 실행 |
+
+## 10. 작업 이력
+
+기능 추가·버그 수정·설정 변경 등은 [WORK_HISTORY.md](./WORK_HISTORY.md)에 날짜별로 기록한다.  
+관련 작업이 완료될 때마다 최신 항목을 문서 **맨 위**에 추가하며, API·DB·환경 변수 변경 시 본 명세서(`SPEC.md`)도 함께 갱신한다.
 
 ---
 
